@@ -1,0 +1,4 @@
+\\tvgopstgp01\LogFiles
+\\tvgopstgp04\LogFiles
+\\njaopstgp01\LogFiles
+\\njaopstgp02\LogFiles
