@@ -18,6 +18,9 @@ Version = v0.1
 ;For Debug Only
 #Include util_arrays
 
+;Included Files
+Sb_InstallFiles()
+
 ;/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\
 ; StartUp
 ;\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/
@@ -53,17 +56,21 @@ FullPath = %CurrentDir%\%The_Today%\SGRData%The_Today%.txt
 AllFiles_Array[A_Index,"Server"] := The_SystemName
 AllFiles_Array[A_Index,"FileDir"] := FullPath
 
+AllFiles_Array[A_Index,"NotGrowingCounter"] := 0
+
 
 
 
 
 
 ;GUI Stuffs
-GUI_y1 += 50
-GUI_y2 += 50
+GUI_y1 += 50 ;Box
+GUI_y2 += 50 ;Text
+GUI_y3 := GUI_y2 - 3 ;Image
 Gui, Add, GroupBox, x6 y%GUI_y1% w310 h40 , %The_SystemName%
 Gui, Add, Text, x16 y%GUI_y2% w40 h20 vGUI_Time%A_Index%,
 Gui, Add, Text, x100 y%GUI_y2% w60 h20 vGUI_Size%A_Index%,
+Gui, Add, Picture, x230 y%GUI_y3% vGUI_Image%A_Index%, %A_ScriptDir%\Data\alf.png
 }
 
 GUI_Build()
@@ -75,9 +82,8 @@ GUI_Build()
 SetTimer, CheckFiles, -1
 Sleep 400
 
-SetTimer, CheckFiles, 30000
-
-
+SetTimer, CheckFiles, 90000
+Return
 
 
 
@@ -95,6 +101,39 @@ AllFiles_Array[A_Index,"Size"] := Fn_DataFileInfoSize(The_Dir)
 guicontrol, Text, GUI_Time%A_Index%, % AllFiles_Array[A_Index,"NewCheck"]
 guicontrol, Text, GUI_Size%A_Index%, % AllFiles_Array[A_Index,"Size"]
 
+
+	If (AllFiles_Array[A_Index,"LastCheck"] = AllFiles_Array[A_Index,"Size"])
+	{
+	AllFiles_Array[A_Index,"NotGrowingCounter"] += 1
+	}
+	Else
+	{
+	AllFiles_Array[A_Index,"NotGrowingCounter"] := 0
+	}
+	;MSgbox % AllFiles_Array[A_Index,"NotGrowingCounter"]
+	
+	If (AllFiles_Array[A_Index,"NotGrowingCounter"] = 0) ;Green
+	{
+	ChosenImage := 0
+	}
+	If (AllFiles_Array[A_Index,"NotGrowingCounter"] = 1) ;Yellow
+	{
+	ChosenImage := 1
+	}
+	If (AllFiles_Array[A_Index,"NotGrowingCounter"] = 2) ;Orange
+	{
+	ChosenImage := 2
+	}
+	If (AllFiles_Array[A_Index,"NotGrowingCounter"] >= 3) ;Red
+	{
+	;Msgbox % A_Index . "  ------    " . AllFiles_Array[A_Index,"NotGrowingCounter"]
+	ChosenImage := 3
+	}
+
+
+GuiControl,, GUI_Image%A_Index%, %A_ScriptDir%\Data\%ChosenImage%.png
+
+AllFiles_Array[A_Index,"LastCheck"] := AllFiles_Array[A_Index,"Size"]
 }
 Return
 
@@ -136,12 +175,18 @@ Return "ERROR"
 
 Fn_DataFileInfoSize(para_File)
 {
-l_FileSize :=
+l_FileSize := ;MakeThis Variable Empty
+
+;Check the size of the file specified in the Function argument/option
 FileGetSize, l_FileSize, %para_File%, k
+
+	;If the filesize is NOT blank
 	If (l_FileSize != "")
 	{
+	;Exit the Function with the value of the filesize
 	Return %l_FileSize%
 	}
+;filesize was blank or not understood. Return the word "ERROR"
 Return "ERROR"
 }
 
@@ -160,8 +205,17 @@ StartUp() {
 Sb_GlobalNameSpace() {
 global
 
-AllFiles_Array := {Server:"", FileDir:"", Size:"", NewCheck:"", LastCheck:"", Result:""}
+AllFiles_Array := {Server:"", FileDir:"", Size:"", NewCheck:"", LastCheck:"", NotGrowingCounter: "", Result:""}
 AllFiles_ArraX = 0
+}
+
+
+Sb_InstallFiles()
+{
+FileInstall, Data\0.png, %A_ScriptDir%\Data\0.png, 1
+FileInstall, Data\1.png, %A_ScriptDir%\Data\1.png, 1
+FileInstall, Data\2.png, %A_ScriptDir%\Data\2.png, 1
+FileInstall, Data\3.png, %A_ScriptDir%\Data\3.png, 1
 }
 
 
