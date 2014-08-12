@@ -9,7 +9,7 @@
 ;Compile Options
 ;~~~~~~~~~~~~~~~~~~~~~
 StartUp()
-Version = v0.1
+Version = v0.3
 
 ;Dependencies
 #Include %A_ScriptDir%\Functions
@@ -49,13 +49,30 @@ CurrentDir := A_LoopReadLine
 	The_SystemName := RE_Dir1
 	StringUpper, The_SystemName, The_SystemName
 	}
-	
+
+Fn_UpdateToday()
+{
+global
 FormatTime, The_Today, %A_Now%, MM-dd-yyyy
 
-FullPath = %CurrentDir%\%The_Today%\SGRData%The_Today%.txt
-AllFiles_Array[A_Index,"Server"] := The_SystemName
-AllFiles_Array[A_Index,"FileDir"] := FullPath
+	Loop % AllFiles_Array.MaxIndex()
+	{
+	FullPath = %CurrentDir%\%The_Today%\SGRData%The_Today%.txt
+	AllFiles_Array[A_Index,"FileDir"] := FullPath
+	}
 
+}
+
+
+Fn_UpdateToday()
+	;Fn_UpdateToday shows what is done in comments. This was done so that it can be called repeatedly to update to the current date
+	;{
+	;FormatTime, The_Today, %A_Now%, MM-dd-yyyy
+
+	;FullPath = %CurrentDir%\%The_Today%\SGRData%The_Today%.txt
+AllFiles_Array[A_Index,"Server"] := The_SystemName
+	;AllFiles_Array[A_Index,"FileDir"] := FullPath
+	;}
 AllFiles_Array[A_Index,"NotGrowingCounter"] := 0
 
 
@@ -90,28 +107,38 @@ Return
 
 
 CheckFiles:
+
+;Loop for each system in the array
 AllFiles_ArraX := AllFiles_Array.MaxIndex()
-Loop, %AllFiles_ArraX%
+Loop % AllFiles_Array.MaxIndex()
 {
+;Update Todays Variable to check todays datafile
+Fn_UpdateToday()
+
 
 The_Dir := AllFiles_Array[A_Index,"FileDir"]
+
+;Get Modified Time and assign it to the Array
 AllFiles_Array[A_Index,"NewCheck"] := Fn_DataFileInfoTime(The_Dir)
+
+;Get File Size and assign it to the Array
 AllFiles_Array[A_Index,"Size"] := Fn_DataFileInfoSize(The_Dir)
 
 guicontrol, Text, GUI_Time%A_Index%, % AllFiles_Array[A_Index,"NewCheck"]
 guicontrol, Text, GUI_Size%A_Index%, % AllFiles_Array[A_Index,"Size"]
 
-
+	;If the Filesize is the same as last time it was checked
 	If (AllFiles_Array[A_Index,"LastCheck"] = AllFiles_Array[A_Index,"Size"])
 	{
+	;Then increment the Counter for not growing
 	AllFiles_Array[A_Index,"NotGrowingCounter"] += 1
 	}
-	Else
+	Else ;It is growing, Reset Counter to zero
 	{
 	AllFiles_Array[A_Index,"NotGrowingCounter"] := 0
 	}
-	;MSgbox % AllFiles_Array[A_Index,"NotGrowingCounter"]
-	
+
+	;Set the color of the GUI picture
 	If (AllFiles_Array[A_Index,"NotGrowingCounter"] = 0) ;Green
 	{
 	ChosenImage := 0
@@ -123,10 +150,10 @@ guicontrol, Text, GUI_Size%A_Index%, % AllFiles_Array[A_Index,"Size"]
 	If (AllFiles_Array[A_Index,"NotGrowingCounter"] = 2) ;Orange
 	{
 	ChosenImage := 2
+	Fn_FlashGUI() ; Flash the icon if it hasn't grown in this long
 	}
 	If (AllFiles_Array[A_Index,"NotGrowingCounter"] >= 3) ;Red
 	{
-	;Msgbox % A_Index . "  ------    " . AllFiles_Array[A_Index,"NotGrowingCounter"]
 	ChosenImage := 3
 	}
 
@@ -145,6 +172,18 @@ GuiClose:
 ExitApp, 1
 
 
+
+
+FlashGUI:
+
+	Loop, 6
+	{
+	Gui Flash
+	Sleep 500  ;Do not change
+	}
+Return
+
+
 ;/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\
 ; Functions
 ;\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/
@@ -155,7 +194,6 @@ Fn_CheckDataFile(para_FileDir)
 global
 
 AllFiles_Array[A_Index,"NewCheck"] := Fn_DataFileInfoTime(para_File)
-
 
 }
 
@@ -212,6 +250,7 @@ AllFiles_ArraX = 0
 
 Sb_InstallFiles()
 {
+FileCreateDir, %A_ScriptDir%\Data\
 FileInstall, Data\0.png, %A_ScriptDir%\Data\0.png, 1
 FileInstall, Data\1.png, %A_ScriptDir%\Data\1.png, 1
 FileInstall, Data\2.png, %A_ScriptDir%\Data\2.png, 1
@@ -219,19 +258,69 @@ FileInstall, Data\3.png, %A_ScriptDir%\Data\3.png, 1
 }
 
 
+Fn_FlashGUI()
+{
+SetTimer, FlashGUI, -1000
+}
+
+
 GUI_Build()
 {
 global
+
+GUI_AOT := 1
 Gui +AlwaysOnTop
+
 ;Title
 Gui, Font, s14 w70, Arial
 Gui, Add, Text, x2 y4 w330 h40 +Center, Datafeed File Status
 Gui, Font, s10 w70, Arial
-Gui, Add, Text, x280 y0 w50 h20 +Right, %Version%
+Gui, Add, Text, x276 y0 w50 h20 +Right, %Version%
 
-Gui, Add, Text, x16 y50 w200 h20, |Modified|------
-Gui, Add, Text, x96 y50 w60 h20, |FileSize|
+;Gui, Add, CheckBox, x30 y30 Checked1 gSwitchOnOff, Always On Top
 
+Gui, Add, Text, x10 y50, |-Modified-|
+Gui, Add, Text, x96 y50, |-FileSize-|
+Gui, Add, Text, x230 y50, |-----Status-----|
+
+
+;Menu
+Menu, FileMenu, Add, Window &Always Top, SwitchOnOff
+Menu, FileMenu, Add, E&xit`tCtrl+Q, Menu_File-Exit
+Menu, MyMenuBar, Add, &File, :FileMenu  ; Attach the sub-menu that was created above
+
+Menu, HelpMenu, Add, &About, Menu_About
+Menu, HelpMenu, Add, &Confluence`tCtrl+H, Menu_Confluence
+Menu, MyMenuBar, Add, &Help, :HelpMenu
+Gui, Menu, MyMenuBar
+
+;Create the final size of the GUI
 GUI_y2 += 40
 Gui, Show, h%GUI_y2% w330, Datafeed File Status
+Return
+
+;Menu Shortcuts
+Menu_Confluence:
+Run http://confluence.tvg.com/display/wog/Ops+Tool+-+Datafeed+File+Status
+Return
+
+Menu_About:
+Msgbox, Checks that the SGRDataFeed file is growing or exists yet.
+Return
+
+SwitchOnOff:
+If (GUI_AOT = 0)
+{
+Gui +AlwaysOnTop
+GUI_AOT := 1
+}
+else
+{
+Gui -AlwaysOnTop
+}
+gui, submit, NoHide
+Return
+
+Menu_File-Exit:
+ExitApp
 }
