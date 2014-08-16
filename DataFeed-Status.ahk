@@ -9,7 +9,7 @@
 ;Compile Options
 ;~~~~~~~~~~~~~~~~~~~~~
 StartUp()
-Version = v0.3
+Version = v0.4
 
 ;Dependencies
 #Include %A_ScriptDir%\Functions
@@ -50,29 +50,12 @@ CurrentDir := A_LoopReadLine
 	StringUpper, The_SystemName, The_SystemName
 	}
 
-Fn_UpdateToday()
-{
-global
-FormatTime, The_Today, %A_Now%, MM-dd-yyyy
-
-	Loop % AllFiles_Array.MaxIndex()
-	{
-	FullPath = %CurrentDir%\%The_Today%\SGRData%The_Today%.txt
-	AllFiles_Array[A_Index,"FileDir"] := FullPath
-	}
-
-}
 
 
-Fn_UpdateToday()
-	;Fn_UpdateToday shows what is done in comments. This was done so that it can be called repeatedly to update to the current date
-	;{
-	;FormatTime, The_Today, %A_Now%, MM-dd-yyyy
 
-	;FullPath = %CurrentDir%\%The_Today%\SGRData%The_Today%.txt
+
 AllFiles_Array[A_Index,"Server"] := The_SystemName
-	;AllFiles_Array[A_Index,"FileDir"] := FullPath
-	;}
+Sb_UpdatePath()
 AllFiles_Array[A_Index,"NotGrowingCounter"] := 0
 
 
@@ -113,7 +96,7 @@ AllFiles_ArraX := AllFiles_Array.MaxIndex()
 Loop % AllFiles_Array.MaxIndex()
 {
 ;Update Todays Variable to check todays datafile
-Fn_UpdateToday()
+Sb_UpdatePath()
 
 
 The_Dir := AllFiles_Array[A_Index,"FileDir"]
@@ -162,6 +145,8 @@ GuiControl,, GUI_Image%A_Index%, %A_ScriptDir%\Data\%ChosenImage%.png
 
 AllFiles_Array[A_Index,"LastCheck"] := AllFiles_Array[A_Index,"Size"]
 }
+;UnComment to see whats in the array
+;Array_Gui(AllFiles_Array)
 Return
 
 
@@ -229,6 +214,9 @@ Return "ERROR"
 }
 
 
+
+
+
 ;/--\--/--\--/--\--/--\--/--\
 ; Subroutines
 ;\--/--\--/--\--/--\--/--\--/
@@ -255,6 +243,22 @@ FileInstall, Data\0.png, %A_ScriptDir%\Data\0.png, 1
 FileInstall, Data\1.png, %A_ScriptDir%\Data\1.png, 1
 FileInstall, Data\2.png, %A_ScriptDir%\Data\2.png, 1
 FileInstall, Data\3.png, %A_ScriptDir%\Data\3.png, 1
+}
+
+
+Sb_UpdatePath()
+{
+global
+FormatTime, The_Today, %A_Now%, MM-dd-yyyy
+
+	Loop % AllFiles_Array.MaxIndex()
+	{
+	The_Server := AllFiles_Array[A_Index,"Server"]
+	
+	FullPath = \\%The_Server%\LogFiles\%The_Today%\SGRData%The_Today%.txt
+	AllFiles_Array[A_Index,"FileDir"] := FullPath
+	}
+
 }
 
 
@@ -285,9 +289,12 @@ Gui, Add, Text, x230 y50, |-----Status-----|
 
 
 ;Menu
+Menu, FileMenu, Add, &Update, CheckFiles
 Menu, FileMenu, Add, Window &Always Top, SwitchOnOff
 Menu, FileMenu, Add, E&xit`tCtrl+Q, Menu_File-Exit
 Menu, MyMenuBar, Add, &File, :FileMenu  ; Attach the sub-menu that was created above
+Menu, FileMenu, Check, Window &Always Top
+;Menu, Default , FileMenu
 
 Menu, HelpMenu, Add, &About, Menu_About
 Menu, HelpMenu, Add, &Confluence`tCtrl+H, Menu_Confluence
@@ -313,10 +320,13 @@ If (GUI_AOT = 0)
 {
 Gui +AlwaysOnTop
 GUI_AOT := 1
+Menu, FileMenu, Check, Window &Always Top
 }
 else
 {
 Gui -AlwaysOnTop
+GUI_AOT := 0
+Menu, FileMenu, UnCheck, Window &Always Top
 }
 gui, submit, NoHide
 Return
