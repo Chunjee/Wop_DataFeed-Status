@@ -301,8 +301,9 @@ Gui, Add, Text, x230 y50, |-----Status-----|
 
 
 ;Menu
-Menu, FileMenu, Add, &Update, CheckFiles
+Menu, FileMenu, Add, &Update Now, CheckFiles
 Menu, FileMenu, Add, Window &Always Top, SwitchOnOff
+Menu, FileMenu, Add, R&estart`tCtrl+R, Menu_File-Restart
 Menu, FileMenu, Add, E&xit`tCtrl+Q, Menu_File-Exit
 Menu, MyMenuBar, Add, &File, :FileMenu  ; Attach the sub-menu that was created above
 Menu, FileMenu, Check, Window &Always Top
@@ -343,6 +344,8 @@ Menu, FileMenu, UnCheck, Window &Always Top
 gui, submit, NoHide
 Return
 
+Menu_File-Restart:
+Reload
 Menu_File-Exit:
 ExitApp
 }
