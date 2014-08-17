@@ -69,7 +69,7 @@ GUI_y2 += 50 ;Text
 GUI_y3 := GUI_y2 - 3 ;Image
 Gui, Add, GroupBox, x6 y%GUI_y1% w310 h40 , %The_SystemName%
 Gui, Add, Text, x16 y%GUI_y2% w40 h20 vGUI_Time%A_Index%,
-Gui, Add, Text, x100 y%GUI_y2% w60 h20 vGUI_Size%A_Index%,
+Gui, Add, Text, x100 y%GUI_y2% w80 h20 vGUI_Size%A_Index%,
 Gui, Add, Picture, x230 y%GUI_y3% vGUI_Image%A_Index%, %A_ScriptDir%\Data\alf.png
 }
 
@@ -107,8 +107,12 @@ AllFiles_Array[A_Index,"NewCheck"] := Fn_DataFileInfoTime(The_Dir)
 ;Get File Size and assign it to the Array
 AllFiles_Array[A_Index,"Size"] := Fn_DataFileInfoSize(The_Dir)
 
+	;Convert to MB for display GUI
+	GUI_FileSizeMB := AllFiles_Array[A_Index,"Size"] / 1024
+	StringTrimRight, GUI_FileSizeMB, GUI_FileSizeMB, 7
+
 guicontrol, Text, GUI_Time%A_Index%, % AllFiles_Array[A_Index,"NewCheck"]
-guicontrol, Text, GUI_Size%A_Index%, % AllFiles_Array[A_Index,"Size"]
+guicontrol, Text, GUI_Size%A_Index%, % AllFiles_Array[A_Index,"Size"] . "  (" . GUI_FileSizeMB . ")MB"
 
 	;If the Filesize is the same as last time it was checked
 	If (AllFiles_Array[A_Index,"LastCheck"] = AllFiles_Array[A_Index,"Size"])
@@ -133,11 +137,13 @@ guicontrol, Text, GUI_Size%A_Index%, % AllFiles_Array[A_Index,"Size"]
 	If (AllFiles_Array[A_Index,"NotGrowingCounter"] = 2) ;Orange
 	{
 	ChosenImage := 2
-	Fn_FlashGUI() ; Flash the icon if it hasn't grown in this long
+	Sb_FlashGUI() ; Flash the icon if it hasn't grown in this long
+	Sb_EmailOps() ; An Empty function
 	}
 	If (AllFiles_Array[A_Index,"NotGrowingCounter"] >= 3) ;Red
 	{
 	ChosenImage := 3
+	Sb_FlashGUI() ; Flash the icon if it hasn't grown in this long
 	}
 
 
@@ -159,14 +165,7 @@ ExitApp, 1
 
 
 
-FlashGUI:
 
-	Loop, 6
-	{
-	Gui Flash
-	Sleep 500  ;Do not change
-	}
-Return
 
 
 ;/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\
@@ -245,6 +244,10 @@ FileInstall, Data\2.png, %A_ScriptDir%\Data\2.png, 1
 FileInstall, Data\3.png, %A_ScriptDir%\Data\3.png, 1
 }
 
+Sb_EmailOps()
+{
+;Currently Does nothing
+}
 
 Sb_UpdatePath()
 {
@@ -262,9 +265,18 @@ FormatTime, The_Today, %A_Now%, MM-dd-yyyy
 }
 
 
-Fn_FlashGUI()
+Sb_FlashGUI()
 {
 SetTimer, FlashGUI, -1000
+Return
+FlashGUI:
+
+	Loop, 6
+	{
+	Gui Flash
+	Sleep 500  ;Do not change this value
+	}
+Return
 }
 
 
