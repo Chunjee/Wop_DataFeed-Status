@@ -68,8 +68,9 @@ GUI_y1 += 50 ;Box
 GUI_y2 += 50 ;Text
 GUI_y3 := GUI_y2 - 3 ;Image
 Gui, Add, GroupBox, x6 y%GUI_y1% w310 h40 , %The_SystemName%
-Gui, Add, Text, x16 y%GUI_y2% w40 h20 vGUI_Time%A_Index%,
-Gui, Add, Text, x100 y%GUI_y2% w80 h20 vGUI_Size%A_Index%,
+Gui, Add, Text, x16 y%GUI_y2% w30 h20 vGUI_Time%A_Index%,
+Gui, Add, Text, x90 y%GUI_y2% w40 h20 +Right vGUI_OldSize%A_Index%,
+Gui, Add, Text, x136 y%GUI_y2% w130 h20 vGUI_Size%A_Index%,
 Gui, Add, Picture, x230 y%GUI_y3% vGUI_Image%A_Index%, %A_ScriptDir%\Data\alf.png
 }
 
@@ -112,7 +113,7 @@ AllFiles_Array[A_Index,"Size"] := Fn_DataFileInfoSize(The_Dir)
 	StringTrimRight, GUI_FileSizeMB, GUI_FileSizeMB, 7
 
 guicontrol, Text, GUI_Time%A_Index%, % AllFiles_Array[A_Index,"NewCheck"]
-guicontrol, Text, GUI_Size%A_Index%, % AllFiles_Array[A_Index,"Size"] . "  (" . GUI_FileSizeMB . ")MB"
+guicontrol, Text, GUI_Size%A_Index%, % AllFiles_Array[A_Index,"Size"] . "  (" . GUI_FileSizeMB . "MB)"
 
 	;If the Filesize is the same as last time it was checked
 	If (AllFiles_Array[A_Index,"LastCheck"] = AllFiles_Array[A_Index,"Size"])
