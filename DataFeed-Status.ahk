@@ -9,11 +9,12 @@
 ;Compile Options
 ;~~~~~~~~~~~~~~~~~~~~~
 StartUp()
-Version = v0.4
+Version = v0.5
 
 ;Dependencies
 #Include %A_ScriptDir%\Functions
 #Include inireadwrite
+#Include internet_fileread
 
 ;For Debug Only
 #Include util_arrays
@@ -27,12 +28,9 @@ Sb_InstallFiles()
 Sb_GlobalNameSpace()
 
 
-The_Settings = %A_ScriptDir%\settings.ini
-Fn_InitializeIni(The_Settings)
-Fn_LoadIni(The_Settings)
-
-
-
+;The_Settings = %A_ScriptDir%\settings.ini
+;Fn_InitializeIni(The_Settings)
+;Fn_LoadIni(The_Settings)
 
 
 
@@ -60,9 +58,6 @@ AllFiles_Array[A_Index,"NotGrowingCounter"] := 0
 
 
 
-
-
-
 ;GUI Stuffs
 GUI_y1 += 50 ;Box
 GUI_y2 += 50 ;Text
@@ -74,20 +69,94 @@ Gui, Add, Text, x136 y%GUI_y2% w130 h20 vGUI_Size%A_Index%,
 Gui, Add, Picture, x230 y%GUI_y3% vGUI_Image%A_Index%, %A_ScriptDir%\Data\alf.png
 }
 
-GUI_Build()
+Loop, Read, %A_ScriptDir%\TPAS_dirs.txt
+{
+GUI_y1 += 50 ;Box
+GUI_y2 += 50 ;Text
+GUI_y3 := GUI_y2 + 20
+TPAS_Array[A_Index,"Name"] := Fn_QuickRegEx(A_LoopReadLine,"\/\/(.+):")
+TPAS_Array[A_Index,"XML"] := A_LoopReadLine
 
+
+Gui, Font, s14, Arial
+Gui, Add, Text, x20 y%GUI_y2% vGUI_TPASTime%A_Index%, 00:00
+Gui, Font, s10, Arial
+
+Gui, Add, GroupBox, x6 y%GUI_y1% w310 h80 , % "TPAS   " . TPAS_Array[A_Index,"Name"]
+Gui, Add, Text, x146 y%GUI_y2% w80 h20 +Right, Load
+Gui, Add, Progress, x230 y%GUI_y2% w80 h14 vGUI_TPASLoad%A_Index%, 100
+Gui, Add, Text, x146 y%GUI_y3% w80 h20 +Right, Latency
+Gui, Add, Progress, x230 y%GUI_y3% w80 h14 vGUI_TPASLatency%A_Index%, 100
+GUI_y3 := GUI_y2 + 40
+Gui, Add, Text, x146 y%GUI_y3% w80 h20 +Right, Transactions
+Gui, Add, Progress, x230 y%GUI_y3% w80 h14 vGUI_TPASTransactions%A_Index%, 100
+
+GUI_y1 += 42 ;Box
+GUI_y2 += 42 ;Text
+}
+
+GUI_Build()
+;MSgbox, akf
 
 ;UnComment to see whats in the array
 ;Array_Gui(AllFiles_Array)
+;Array_Gui(TPAS_Array)
 
 SetTimer, CheckFiles, -1
+SetTimer, CheckTPAS, -1
 Sleep 400
 
 SetTimer, CheckFiles, 90000
+SetTimer, CheckTPAS, 9000
 Return
 
 
 
+
+CheckTPAS:
+
+Loop % TPAS_Array.MaxIndex()
+{
+DownloadFile := TPAS_Array[A_Index,"XML"]
+
+;Download file and read to Variable. Note that the text file is all one line so don't try to loop read a line at a time
+UrlDownloadToFile, %DownloadFile% , % A_ScriptDir . "\Data\" . TPAS_Array[A_Index,"Name"] . ".txt"
+FileRead, FileContents, % A_ScriptDir . "\Data\" . TPAS_Array[A_Index,"Name"] . ".txt"
+
+;Scan for each arrays value and assign
+TPAS_Array[A_Index,"TFATimestamp"] := Fn_QuickRegEx(FileContents,"(\d\d:\d\d):\d\d<\/TFATimestamp>")
+TPAS_Array[A_Index,"TotalTransactions"] := Fn_QuickRegEx(FileContents,"<TotalTransactions>(.*)<\/TotalTransactions>")
+TPAS_Array[A_Index,"MaxTransRate"] := Fn_QuickRegEx(FileContents,"<MaxTransRate>(.*)<\/MaxTransRate>")
+TPAS_Array[A_Index,"CurrentTransRate"] := Fn_QuickRegEx(FileContents,"<CurrentTransRate>(.*)<\/CurrentTransRate>")
+TPAS_Array[A_Index,"TransQueueLen"] := Fn_QuickRegEx(FileContents,"<TransQueueLen>(.*)<\/TransQueueLen>")
+TPAS_Array[A_Index,"ToteTimestamp"] := Fn_QuickRegEx(FileContents,"(\d\d:\d\d):\d\d<\/ToteTimestamp>")
+TPAS_Array[A_Index,"LastSeqNo"] := Fn_QuickRegEx(FileContents,"<LastSeqNo>(.*)<\/LastSeqNo>")
+TPAS_Array[A_Index,"saveTotalTrans"] := Fn_QuickRegEx(FileContents,"<saveTotalTrans>(.*)<\/saveTotalTrans>")
+TPAS_Array[A_Index,"maxLoadRate"] := Fn_QuickRegEx(FileContents,"<maxLoadRate>(.*)<\/maxLoadRate>")
+TPAS_Array[A_Index,"CurrentLoadRate"] := Fn_QuickRegEx(FileContents,"<CurrentLoadRate>(.*)<\/CurrentLoadRate>")
+TPAS_Array[A_Index,"maxLatency"] := Fn_QuickRegEx(FileContents,"<maxLatency>(.*)<\/maxLatency>")
+TPAS_Array[A_Index,"avgLatency"] := Fn_QuickRegEx(FileContents,"<avgLatency>(.*)<\/avgLatency>")
+
+
+;View Array
+;Array_Gui(TPAS_Array)
+
+guicontrol, Text, GUI_TPASTime%A_Index%, % TPAS_Array[A_Index,"TFATimestamp"]
+
+The_LoadPercent := (TPAS_Array[A_Index,"CurrentLoadRate"] / TPAS_Array[A_Index,"maxLoadRate"]) * 100
+;The_LoadPercent := Fn_PercentCheck(The_LoadPercent)
+GuiControl,, GUI_TPASLoad%A_Index%, %The_LoadPercent%
+
+The_LatencyPercent := (TPAS_Array[A_Index,"avgLatency"] / (TPAS_Array[A_Index,"maxLatency"] * 10)) * 100
+;The_LoadPercent := Fn_PercentCheck(The_LoadPercent)
+GuiControl,, GUI_TPASLatency%A_Index%, %The_LatencyPercent%
+
+The_LatencyPercent := ((TPAS_Array[A_Index,"CurrentTransRate"] / 2) / TPAS_Array[A_Index,"MaxTransRate"]) * 100
+;The_LatencyPercent := Fn_PercentCheck(The_LatencyPercent)
+GuiControl,, GUI_TPASTransactions%A_Index%, %The_LatencyPercent%
+}
+
+Return
 
 
 CheckFiles:
@@ -147,7 +216,6 @@ guicontrol, Text, GUI_Size%A_Index%, % AllFiles_Array[A_Index,"Size"] . "  (" . 
 	Sb_FlashGUI() ; Flash the icon if it hasn't grown in this long
 	}
 
-
 GuiControl,, GUI_Image%A_Index%, %A_ScriptDir%\Data\%ChosenImage%.png
 
 AllFiles_Array[A_Index,"LastCheck"] := AllFiles_Array[A_Index,"Size"]
@@ -167,11 +235,57 @@ ExitApp, 1
 
 
 
-
-
 ;/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\
 ; Functions
 ;\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/
+
+Fn_QuickRegEx(para_Input,para_RegEx)
+{
+	RegExMatch(para_Input, para_RegEx, RE_Match)
+	If (RE_Match1 != "")
+	{
+	Return %RE_Match1%
+	}
+Return "null"
+}
+
+
+Fn_PercentCheck(para_Input)
+{
+Msgbox, %para_Input%
+	If (para_Input >= 100)
+	{
+	Msgbox, big
+	Return 100
+	}
+	If (para_Input <= 1)
+	{
+	Return 2
+	}
+	Msgbox, wut
+Return %para_Input%
+}
+
+
+;UNUSED
+Fn_TPASArrayInsert(para_TPASIndex,para_Readline)
+{
+global TPAS_Array
+;Example Input: <TFATimestamp>08/24/2014 09:17:50</TFATimestamp>
+	;Grab what the Tag is
+	RegExMatch(para_Readline, "<(\w*)>", RE_Tag)
+	If (RE_Tag1 != "")
+	{
+	l_XMLElement := RE_Tag1
+		;Grab Everything within the tag
+		RegExMatch(para_Readline, ">(.*)<", RE_Value)
+		If (RE_Value1 != "")
+		{
+		;Put it into the Array. Note that para_TPASIndex is the Index value assigned to each TPAS
+		TPAS_Array[para_TPASIndex,l_XMLElement] := RE_Value1
+		}
+	}
+}
 
 
 Fn_CheckDataFile(para_FileDir)
@@ -216,7 +330,6 @@ Return "ERROR"
 
 
 
-
 ;/--\--/--\--/--\--/--\--/--\
 ; Subroutines
 ;\--/--\--/--\--/--\--/--\--/
@@ -231,8 +344,12 @@ StartUp() {
 Sb_GlobalNameSpace() {
 global
 
+The_FancyName := "Tote Health Monitor"
+
 AllFiles_Array := {Server:"", FileDir:"", Size:"", NewCheck:"", LastCheck:"", NotGrowingCounter: "", Result:""}
 AllFiles_ArraX = 0
+
+TPAS_Array := {Name:"", XML:"", TFATimestamp:"", LastTFA:"", TotalTransactions:"", MaxTransRate:"", CurrentTransRate:"", TransQueueLen:"", ToteTimestamp:"", LastSeqNo:"", saveTotalTrans:"", maxLoadRate:"", CurrentLoadRate:"", maxLatency:"", avgLatency:"", tpas_stats:"Not Used"}
 }
 
 
@@ -290,14 +407,14 @@ Gui +AlwaysOnTop
 
 ;Title
 Gui, Font, s14 w70, Arial
-Gui, Add, Text, x2 y4 w330 h40 +Center, Datafeed File Status
+Gui, Add, Text, x2 y4 w330 h40 +Center, %The_FancyName%
 Gui, Font, s10 w70, Arial
 Gui, Add, Text, x276 y0 w50 h20 +Right, %Version%
 
 ;Gui, Add, CheckBox, x30 y30 Checked1 gSwitchOnOff, Always On Top
 
-Gui, Add, Text, x10 y50, |-Modified-|
-Gui, Add, Text, x96 y50, |-FileSize-|
+;Gui, Add, Text, x10 y50, |-Modified-|
+;Gui, Add, Text, x96 y50, |-FileSize-|
 Gui, Add, Text, x230 y50, |-----Status-----|
 
 
@@ -317,7 +434,7 @@ Gui, Menu, MyMenuBar
 
 ;Create the final size of the GUI
 GUI_y2 += 40
-Gui, Show, h%GUI_y2% w330, Datafeed File Status
+Gui, Show, h%GUI_y2% w330, %The_FancyName%
 Return
 
 ;Menu Shortcuts
