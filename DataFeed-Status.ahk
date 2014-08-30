@@ -144,16 +144,16 @@ TPAS_Array[A_Index,"avgLatency"] := Fn_QuickRegEx(FileContents,"<avgLatency>(.*)
 guicontrol, Text, GUI_TPASTime%A_Index%, % TPAS_Array[A_Index,"TFATimestamp"]
 
 The_LoadPercent := (TPAS_Array[A_Index,"CurrentLoadRate"] / TPAS_Array[A_Index,"maxLoadRate"]) * 100
-;The_LoadPercent := Fn_PercentCheck(The_LoadPercent)
+The_LoadPercent := Fn_PercentCheck(The_LoadPercent)
 GuiControl,, GUI_TPASLoad%A_Index%, %The_LoadPercent%
 
 The_LatencyPercent := (TPAS_Array[A_Index,"avgLatency"] / (TPAS_Array[A_Index,"maxLatency"] * 10)) * 100
-;The_LoadPercent := Fn_PercentCheck(The_LoadPercent)
+The_LatencyPercent := Fn_PercentCheck(The_LatencyPercent)
 GuiControl,, GUI_TPASLatency%A_Index%, %The_LatencyPercent%
 
-The_LatencyPercent := ((TPAS_Array[A_Index,"CurrentTransRate"] / 2) / TPAS_Array[A_Index,"MaxTransRate"]) * 100
-;The_LatencyPercent := Fn_PercentCheck(The_LatencyPercent)
-GuiControl,, GUI_TPASTransactions%A_Index%, %The_LatencyPercent%
+The_TransactionsPercent := ((TPAS_Array[A_Index,"CurrentTransRate"] / 2) / TPAS_Array[A_Index,"MaxTransRate"]) * 100
+The_TransactionsPercent := Fn_PercentCheck(The_TransactionsPercent)
+GuiControl,, GUI_TPASTransactions%A_Index%, %The_TransactionsPercent%
 }
 
 Return
@@ -252,17 +252,16 @@ Return "null"
 
 Fn_PercentCheck(para_Input)
 {
-Msgbox, %para_Input%
+para_Input := Ceil(para_Input)
+;Msgbox, %para_Input%
 	If (para_Input >= 100)
 	{
-	Msgbox, big
 	Return 100
 	}
 	If (para_Input <= 1)
 	{
-	Return 2
+	Return 1
 	}
-	Msgbox, wut
 Return %para_Input%
 }
 
