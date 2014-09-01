@@ -9,7 +9,7 @@
 ;Compile Options
 ;~~~~~~~~~~~~~~~~~~~~~
 StartUp()
-Version = v0.5
+Version = v0.6
 
 ;Dependencies
 #Include %A_ScriptDir%\Functions
@@ -164,7 +164,7 @@ The_LatencyPercent := (TPAS_Array[A_Index,"avgLatency"] / (TPAS_Array[A_Index,"m
 The_LatencyPercent := Fn_PercentCheck(The_LatencyPercent)
 GuiControl,, GUI_TPASLatency%A_Index%, %The_LatencyPercent%
 
-The_TransactionsPercent := ((TPAS_Array[A_Index,"CurrentTransRate"] / 2) / TPAS_Array[A_Index,"MaxTransRate"]) * 100
+The_TransactionsPercent := ((TPAS_Array[A_Index,"CurrentTransRate"]) / 300) * 100 ; TPAS_Array[A_Index,"MaxTransRate"] substituted for 300 as a test
 The_TransactionsPercent := Fn_PercentCheck(The_TransactionsPercent)
 GuiControl,, GUI_TPASTransactions%A_Index%, %The_TransactionsPercent%
 }
@@ -464,7 +464,7 @@ Return
 
 ;Menu Shortcuts
 Menu_Confluence:
-Run http://confluence.tvg.com/display/wog/Ops+Tool+-+Datafeed+File+Status
+Run http://confluence.tvg.com/display/wog/Ops+Tool+-+Tote+Health+Monitor
 Return
 
 Menu_About:
