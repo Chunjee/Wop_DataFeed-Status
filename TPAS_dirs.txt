@@ -1,0 +1,2 @@
+http://10.208.1.79:8000/xml#http://viaopstjs02:8000/stats
+http://10.208.1.183:8000/xml#http://njaopstjs01:8000/stats

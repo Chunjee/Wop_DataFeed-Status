@@ -62,7 +62,7 @@ AllFiles_Array[A_Index,"NotGrowingCounter"] := 0
 GUI_y1 += 50 ;Box
 GUI_y2 += 50 ;Text
 GUI_y3 := GUI_y2 - 3 ;Image
-Gui, Add, GroupBox, x6 y%GUI_y1% w310 h40 , %The_SystemName%
+Gui, Add, GroupBox, x6 y%GUI_y1% w310 h40, %The_SystemName%
 Gui, Add, Text, x16 y%GUI_y2% w30 h20 vGUI_Time%A_Index%,
 Gui, Add, Text, x90 y%GUI_y2% w40 h20 +Right vGUI_OldSize%A_Index%,
 Gui, Add, Text, x136 y%GUI_y2% w130 h20 vGUI_Size%A_Index%,
@@ -71,18 +71,29 @@ Gui, Add, Picture, x230 y%GUI_y3% vGUI_Image%A_Index%, %A_ScriptDir%\Data\alf.pn
 
 Loop, Read, %A_ScriptDir%\TPAS_dirs.txt
 {
+;Split data from each line in file
+;CODE
+
+
+
 GUI_y1 += 50 ;Box
 GUI_y2 += 50 ;Text
 GUI_y3 := GUI_y2 + 20
-TPAS_Array[A_Index,"Name"] := Fn_QuickRegEx(A_LoopReadLine,"\/\/(.+):")
-TPAS_Array[A_Index,"XML"] := A_LoopReadLine
 
+	StringSplit, TPASdata_short, A_LoopReadLine, #,
+	The_TPASName := Fn_QuickRegEx(TPASdata_short2,"\/\/(.+):")
+	StringUpper, The_TPASName, The_TPASName
+
+	TPAS_Array[A_Index,"Name"] := The_TPASName
+	TPAS_Array[A_Index,"XML"] := TPASdata_short1
+	TPAS_Array[A_Index,"HTML"] := TPASdata_short2
 
 Gui, Font, s14, Arial
 Gui, Add, Text, x20 y%GUI_y2% vGUI_TPASTime%A_Index%, 00:00
+;Gui, Add, Text, x20 y%GUI_y3% vGUI_TPASSession%A_Index%, 000
 Gui, Font, s10, Arial
 
-Gui, Add, GroupBox, x6 y%GUI_y1% w310 h80 , % "TPAS   " . TPAS_Array[A_Index,"Name"]
+Gui, Add, GroupBox, x6 y%GUI_y1% w310 h80 vGUI_TPASSession%A_Index%, % "TPAS   " . TPAS_Array[A_Index,"Name"]
 Gui, Add, Text, x146 y%GUI_y2% w80 h20 +Right, Load
 Gui, Add, Progress, x230 y%GUI_y2% w80 h14 vGUI_TPASLoad%A_Index%, 100
 Gui, Add, Text, x146 y%GUI_y3% w80 h20 +Right, Latency
@@ -104,24 +115,26 @@ GUI_Build()
 
 SetTimer, CheckFiles, -1
 SetTimer, CheckTPAS, -1
+SetTimer, CheckTPASSession, -1
 Sleep 400
 
 SetTimer, CheckFiles, 90000
+SetTimer, CheckTPASSession, 90000
 SetTimer, CheckTPAS, 9000
+
+
 Return
 
 
 
 
 CheckTPAS:
-
 Loop % TPAS_Array.MaxIndex()
 {
-DownloadFile := TPAS_Array[A_Index,"XML"]
-
+DownloadXML := TPAS_Array[A_Index,"XML"]
 ;Download file and read to Variable. Note that the text file is all one line so don't try to loop read a line at a time
-UrlDownloadToFile, %DownloadFile% , % A_ScriptDir . "\Data\" . TPAS_Array[A_Index,"Name"] . ".txt"
-FileRead, FileContents, % A_ScriptDir . "\Data\" . TPAS_Array[A_Index,"Name"] . ".txt"
+UrlDownloadToFile, %DownloadXML% , % A_ScriptDir . "\Data\" . TPAS_Array[A_Index,"Name"] . "_XML.txt"
+FileRead, FileContents, % A_ScriptDir . "\Data\" . TPAS_Array[A_Index,"Name"] . "_XML.txt"
 
 ;Scan for each arrays value and assign
 TPAS_Array[A_Index,"TFATimestamp"] := Fn_QuickRegEx(FileContents,"(\d\d:\d\d):\d\d<\/TFATimestamp>")
@@ -155,7 +168,20 @@ The_TransactionsPercent := ((TPAS_Array[A_Index,"CurrentTransRate"] / 2) / TPAS_
 The_TransactionsPercent := Fn_PercentCheck(The_TransactionsPercent)
 GuiControl,, GUI_TPASTransactions%A_Index%, %The_TransactionsPercent%
 }
+Return
 
+
+
+;Session Number STUFF
+CheckTPASSession:
+Loop % TPAS_Array.MaxIndex()
+{
+DownloadHTML := TPAS_Array[A_Index,"HTML"]
+UrlDownloadToFile, %DownloadHTML% , % A_ScriptDir . "\Data\" . TPAS_Array[A_Index,"Name"] . "_HTML.txt"
+FileRead, FileContents2, % A_ScriptDir . "\Data\" . TPAS_Array[A_Index,"Name"] . "_HTML.txt"
+TPAS_Array[A_Index,"SessionNumber"] := Fn_QuickRegEx(FileContents2,"SESSION # \[ (\d*) \]")
+guicontrol, Text, GUI_TPASSession%A_Index%, % TPAS_Array[A_Index,"Name"] . "      #" . TPAS_Array[A_Index,"SessionNumber"]
+}
 Return
 
 
@@ -348,7 +374,7 @@ The_FancyName := "Tote Health Monitor"
 AllFiles_Array := {Server:"", FileDir:"", Size:"", NewCheck:"", LastCheck:"", NotGrowingCounter: "", Result:""}
 AllFiles_ArraX = 0
 
-TPAS_Array := {Name:"", XML:"", TFATimestamp:"", LastTFA:"", TotalTransactions:"", MaxTransRate:"", CurrentTransRate:"", TransQueueLen:"", ToteTimestamp:"", LastSeqNo:"", saveTotalTrans:"", maxLoadRate:"", CurrentLoadRate:"", maxLatency:"", avgLatency:"", tpas_stats:"Not Used"}
+TPAS_Array := {Name:"", XML:"", HTML:"", SessionNumber:"", TFATimestamp:"", LastTFA:"", TotalTransactions:"", MaxTransRate:"", CurrentTransRate:"", TransQueueLen:"", ToteTimestamp:"", LastSeqNo:"", saveTotalTrans:"", maxLoadRate:"", CurrentLoadRate:"", maxLatency:"", avgLatency:"", tpas_stats:"Not Used"}
 }
 
 
