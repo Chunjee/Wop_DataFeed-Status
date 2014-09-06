@@ -9,7 +9,7 @@
 ;Compile Options
 ;~~~~~~~~~~~~~~~~~~~~~
 StartUp()
-Version = v0.6
+Version = v0.6.1
 
 ;Dependencies
 #Include %A_ScriptDir%\Functions
@@ -106,8 +106,15 @@ Gui, Add, Progress, x230 y%GUI_y2% w80 h14 vGUI_TPASLoad%A_Index%, 100
 Gui, Add, Text, x146 y%GUI_y3% w80 h20 +Right, Latency
 Gui, Add, Progress, x230 y%GUI_y3% w80 h14 vGUI_TPASLatency%A_Index%, 100
 GUI_y3 := GUI_y2 + 40
-Gui, Add, Text, x146 y%GUI_y3% w80 h20 +Right, Transactions
+
+;Transactions also has a textbox with the current number
+Gui, Add, Text, x120 y%GUI_y3% w80 h20 +Right, Transactions
+Gui, Font, s10 w700, Arial
+Gui, Add, Text, x204 y%GUI_y3% vGUI_TransactionNumber%A_Index%, 000
+Gui, Font, s10 w100, Arial
 Gui, Add, Progress, x230 y%GUI_y3% w80 h14 vGUI_TPASTransactions%A_Index%, 100
+
+
 
 GUI_y1 += 42 ;Box
 GUI_y2 += 42 ;Text
@@ -122,7 +129,7 @@ GUI_Build()
 SetTimer, CheckFiles, -1
 SetTimer, CheckTPAS, -1
 SetTimer, CheckTPASSession, -1
-Sleep 400
+Sleep 200
 
 SetTimer, CheckFiles, 90000
 SetTimer, CheckTPASSession, 90000
@@ -170,9 +177,14 @@ The_LatencyPercent := (TPAS_Array[A_Index,"avgLatency"] / (TPAS_Array[A_Index,"m
 The_LatencyPercent := Fn_PercentCheck(The_LatencyPercent)
 GuiControl,, GUI_TPASLatency%A_Index%, %The_LatencyPercent%
 
-The_TransactionsPercent := ((TPAS_Array[A_Index,"CurrentTransRate"]) / 100) * 100 ; TPAS_Array[A_Index,"MaxTransRate"] substituted for 300 as a test
+The_TransactionsPercent := ((TPAS_Array[A_Index,"CurrentTransRate"]) / 100) * 100 ; TPAS_Array[A_Index,"MaxTransRate"] substituted for 100 as max
 The_TransactionsPercent := Fn_PercentCheck(The_TransactionsPercent)
 GuiControl,, GUI_TPASTransactions%A_Index%, %The_TransactionsPercent%
+
+;Transaction Rate Raw Number
+The_RecentTransactions := TPAS_Array[A_Index,"saveTotalTrans"] - TPAS_Array[A_Index,"LastTransactionTotal"]
+TPAS_Array[A_Index,"LastTransactionTotal"] := TPAS_Array[A_Index,"saveTotalTrans"]
+GuiControl, Text, GUI_TransactionNumber%A_Index%, % The_RecentTransactions
 }
 Return
 
@@ -193,8 +205,7 @@ guicontrol, Text, GUI_TPASSession%A_Index%, % TPAS_Array[A_Index,"Name"] . "    
 DownloadBOP := TPAS_Array[A_Index,"BOP"]
 UrlDownloadToFile, %DownloadBOP% , % A_ScriptDir . "\Data\" . TPAS_Array[A_Index,"Name"] . "_BOPHTML.txt"
 
-REG = NumberOfResultsEvents\">(\d*)<\/span>
-;"
+REG = NumberOfResultsEvents\">(\d*)<\/span> ;" ;Comment end
 FileRead, FileContents, % A_ScriptDir . "\Data\" . TPAS_Array[A_Index,"Name"] . "_BOPHTML.txt"
 TPAS_Array[A_Index,"ResultsNumber"] := Fn_QuickRegEx(FileContents,REG)
 
@@ -393,7 +404,7 @@ The_FancyName := "Tote Health Monitor"
 AllFiles_Array := {Server:"", FileDir:"", Size:"", NewCheck:"", LastCheck:"", NotGrowingCounter: "", Result:""}
 AllFiles_ArraX = 0
 
-TPAS_Array := {Name:"", XML:"", HTML:"", BOP:"", ResultsNumber:"", SessionNumber:"", TFATimestamp:"", LastTFA:"", TotalTransactions:"", MaxTransRate:"", CurrentTransRate:"", TransQueueLen:"", ToteTimestamp:"", LastSeqNo:"", saveTotalTrans:"", maxLoadRate:"", CurrentLoadRate:"", maxLatency:"", avgLatency:"", tpas_stats:"Not Used"}
+TPAS_Array := {Name:"", XML:"", HTML:"", BOP:"", ResultsNumber:"", SessionNumber:"", TFATimestamp:"", LastTFA:"", TotalTransactions:"", MaxTransRate:"", CurrentTransRate:"", TransQueueLen:"", ToteTimestamp:"", LastSeqNo:"", saveTotalTrans:"", maxLoadRate:"", CurrentLoadRate:"", maxLatency:"", avgLatency:"", LastTransactionTotal:""}
 }
 
 
