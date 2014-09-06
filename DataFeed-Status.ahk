@@ -83,17 +83,24 @@ GUI_y3 := GUI_y2 + 20
 	StringSplit, TPASdata_short, A_LoopReadLine, #,
 	The_TPASName := Fn_QuickRegEx(TPASdata_short2,"\/\/(.+):")
 	StringUpper, The_TPASName, The_TPASName
-
+	
 	TPAS_Array[A_Index,"Name"] := The_TPASName
 	TPAS_Array[A_Index,"XML"] := TPASdata_short1
 	TPAS_Array[A_Index,"HTML"] := TPASdata_short2
+	
+	TPAS_Array[A_Index,"BOP"] := "http://" . TPASdata_short3 . "/RaceDayController/Status.aspx"
 
+	
 Gui, Font, s14, Arial
 Gui, Add, Text, x20 y%GUI_y2% vGUI_TPASTime%A_Index%, 00:00
 ;Gui, Add, Text, x20 y%GUI_y3% vGUI_TPASSession%A_Index%, 000
 Gui, Font, s10, Arial
 
 Gui, Add, GroupBox, x6 y%GUI_y1% w310 h80 vGUI_TPASSession%A_Index%, % "TPAS   " . TPAS_Array[A_Index,"Name"]
+
+Gui, Add, Text, x10 y%GUI_y3% w60 h20 +Right, Results:
+Gui, Add, Text, x74 y%GUI_y3% vGUI_RaceResults%A_Index%, 000
+
 Gui, Add, Text, x146 y%GUI_y2% w80 h20 +Right, Load
 Gui, Add, Progress, x230 y%GUI_y2% w80 h14 vGUI_TPASLoad%A_Index%, 100
 Gui, Add, Text, x146 y%GUI_y3% w80 h20 +Right, Latency
@@ -107,7 +114,6 @@ GUI_y2 += 42 ;Text
 }
 
 GUI_Build()
-;MSgbox, akf
 
 ;UnComment to see whats in the array
 ;Array_Gui(AllFiles_Array)
@@ -164,7 +170,7 @@ The_LatencyPercent := (TPAS_Array[A_Index,"avgLatency"] / (TPAS_Array[A_Index,"m
 The_LatencyPercent := Fn_PercentCheck(The_LatencyPercent)
 GuiControl,, GUI_TPASLatency%A_Index%, %The_LatencyPercent%
 
-The_TransactionsPercent := ((TPAS_Array[A_Index,"CurrentTransRate"]) / 300) * 100 ; TPAS_Array[A_Index,"MaxTransRate"] substituted for 300 as a test
+The_TransactionsPercent := ((TPAS_Array[A_Index,"CurrentTransRate"]) / 100) * 100 ; TPAS_Array[A_Index,"MaxTransRate"] substituted for 300 as a test
 The_TransactionsPercent := Fn_PercentCheck(The_TransactionsPercent)
 GuiControl,, GUI_TPASTransactions%A_Index%, %The_TransactionsPercent%
 }
@@ -172,7 +178,7 @@ Return
 
 
 
-;Session Number STUFF
+;Session Number STUFF. Also do Race Results
 CheckTPASSession:
 Loop % TPAS_Array.MaxIndex()
 {
@@ -181,6 +187,19 @@ UrlDownloadToFile, %DownloadHTML% , % A_ScriptDir . "\Data\" . TPAS_Array[A_Inde
 FileRead, FileContents2, % A_ScriptDir . "\Data\" . TPAS_Array[A_Index,"Name"] . "_HTML.txt"
 TPAS_Array[A_Index,"SessionNumber"] := Fn_QuickRegEx(FileContents2,"SESSION # \[ (\d*) \]")
 guicontrol, Text, GUI_TPASSession%A_Index%, % TPAS_Array[A_Index,"Name"] . "      #" . TPAS_Array[A_Index,"SessionNumber"]
+
+
+;Now do Race Results
+DownloadBOP := TPAS_Array[A_Index,"BOP"]
+UrlDownloadToFile, %DownloadBOP% , % A_ScriptDir . "\Data\" . TPAS_Array[A_Index,"Name"] . "_BOPHTML.txt"
+
+REG = NumberOfResultsEvents\">(\d*)<\/span>
+;"
+FileRead, FileContents, % A_ScriptDir . "\Data\" . TPAS_Array[A_Index,"Name"] . "_BOPHTML.txt"
+TPAS_Array[A_Index,"ResultsNumber"] := Fn_QuickRegEx(FileContents,REG)
+
+
+guicontrol, Text, GUI_RaceResults%A_Index%, % TPAS_Array[A_Index,"ResultsNumber"]
 }
 Return
 
@@ -374,7 +393,7 @@ The_FancyName := "Tote Health Monitor"
 AllFiles_Array := {Server:"", FileDir:"", Size:"", NewCheck:"", LastCheck:"", NotGrowingCounter: "", Result:""}
 AllFiles_ArraX = 0
 
-TPAS_Array := {Name:"", XML:"", HTML:"", SessionNumber:"", TFATimestamp:"", LastTFA:"", TotalTransactions:"", MaxTransRate:"", CurrentTransRate:"", TransQueueLen:"", ToteTimestamp:"", LastSeqNo:"", saveTotalTrans:"", maxLoadRate:"", CurrentLoadRate:"", maxLatency:"", avgLatency:"", tpas_stats:"Not Used"}
+TPAS_Array := {Name:"", XML:"", HTML:"", BOP:"", ResultsNumber:"", SessionNumber:"", TFATimestamp:"", LastTFA:"", TotalTransactions:"", MaxTransRate:"", CurrentTransRate:"", TransQueueLen:"", ToteTimestamp:"", LastSeqNo:"", saveTotalTrans:"", maxLoadRate:"", CurrentLoadRate:"", maxLatency:"", avgLatency:"", tpas_stats:"Not Used"}
 }
 
 
