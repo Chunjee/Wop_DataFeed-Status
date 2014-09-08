@@ -25,6 +25,19 @@ Sb_InstallFiles()
 ;/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\
 ; StartUp
 ;\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/
+
+;Check settings.ini. Quit if not found
+		IfExist, %A_ScriptDir%\Data\config.ini
+		{
+		Path_SettingsFile = %A_ScriptDir%\Data\config.ini
+		}
+		Else
+		{
+		Fn_TempMessage("Could not find config file. Quitting in 10 seconds")
+		ExitApp, 1
+		}
+Fn_InitializeIni(Path_SettingsFile)
+Fn_LoadIni(Path_SettingsFile)
 Sb_GlobalNameSpace()
 
 
@@ -126,9 +139,9 @@ SetTimer, CheckTPAS, -1
 SetTimer, CheckTPASSession, -1
 Sleep 200
 
-SetTimer, CheckFiles, 90000
-SetTimer, CheckTPASSession, 90000
-SetTimer, CheckTPAS, 9000
+SetTimer, CheckFiles, %UserOption_CheckDataFiles%
+SetTimer, CheckTPASSession, %UserOption_CheckSessionNumber%
+SetTimer, CheckTPAS, %UserOption_CheckTPAS%
 
 
 Return
@@ -141,22 +154,22 @@ Loop % TPAS_Array.MaxIndex()
 {
 DownloadXML := TPAS_Array[A_Index,"XML"]
 ;Download file and read to Variable. Note that the text file is all one line so don't try to loop read a line at a time
-UrlDownloadToFile, %DownloadXML% , % A_ScriptDir . "\Data\" . TPAS_Array[A_Index,"Name"] . "_XML.txt"
-FileRead, FileContents, % A_ScriptDir . "\Data\" . TPAS_Array[A_Index,"Name"] . "_XML.txt"
+UrlDownloadToFile, %DownloadXML% , % A_ScriptDir . "\Data\Temp\" . TPAS_Array[A_Index,"Name"] . "_XML.txt"
+FileRead, FileContents_TPASXML, % A_ScriptDir . "\Data\Temp\" . TPAS_Array[A_Index,"Name"] . "_XML.txt"
 
 ;Scan for each arrays value and assign
-TPAS_Array[A_Index,"TFATimestamp"] := Fn_QuickRegEx(FileContents,"(\d\d:\d\d):\d\d<\/TFATimestamp>")
-TPAS_Array[A_Index,"TotalTransactions"] := Fn_QuickRegEx(FileContents,"<TotalTransactions>(.*)<\/TotalTransactions>")
-TPAS_Array[A_Index,"MaxTransRate"] := Fn_QuickRegEx(FileContents,"<MaxTransRate>(.*)<\/MaxTransRate>")
-TPAS_Array[A_Index,"CurrentTransRate"] := Fn_QuickRegEx(FileContents,"<CurrentTransRate>(.*)<\/CurrentTransRate>")
-TPAS_Array[A_Index,"TransQueueLen"] := Fn_QuickRegEx(FileContents,"<TransQueueLen>(.*)<\/TransQueueLen>")
-TPAS_Array[A_Index,"ToteTimestamp"] := Fn_QuickRegEx(FileContents,"(\d\d:\d\d):\d\d<\/ToteTimestamp>")
-TPAS_Array[A_Index,"LastSeqNo"] := Fn_QuickRegEx(FileContents,"<LastSeqNo>(.*)<\/LastSeqNo>")
-TPAS_Array[A_Index,"saveTotalTrans"] := Fn_QuickRegEx(FileContents,"<saveTotalTrans>(.*)<\/saveTotalTrans>")
-TPAS_Array[A_Index,"maxLoadRate"] := Fn_QuickRegEx(FileContents,"<maxLoadRate>(.*)<\/maxLoadRate>")
-TPAS_Array[A_Index,"CurrentLoadRate"] := Fn_QuickRegEx(FileContents,"<CurrentLoadRate>(.*)<\/CurrentLoadRate>")
-TPAS_Array[A_Index,"maxLatency"] := Fn_QuickRegEx(FileContents,"<maxLatency>(.*)<\/maxLatency>")
-TPAS_Array[A_Index,"avgLatency"] := Fn_QuickRegEx(FileContents,"<avgLatency>(.*)<\/avgLatency>")
+TPAS_Array[A_Index,"TFATimestamp"] := Fn_QuickRegEx(FileContents_TPASXML,"(\d\d:\d\d):\d\d<\/TFATimestamp>")
+TPAS_Array[A_Index,"TotalTransactions"] := Fn_QuickRegEx(FileContents_TPASXML,"<TotalTransactions>(.*)<\/TotalTransactions>")
+TPAS_Array[A_Index,"MaxTransRate"] := Fn_QuickRegEx(FileContents_TPASXML,"<MaxTransRate>(.*)<\/MaxTransRate>")
+TPAS_Array[A_Index,"CurrentTransRate"] := Fn_QuickRegEx(FileContents_TPASXML,"<CurrentTransRate>(.*)<\/CurrentTransRate>")
+TPAS_Array[A_Index,"TransQueueLen"] := Fn_QuickRegEx(FileContents_TPASXML,"<TransQueueLen>(.*)<\/TransQueueLen>")
+TPAS_Array[A_Index,"ToteTimestamp"] := Fn_QuickRegEx(FileContents_TPASXML,"(\d\d:\d\d):\d\d<\/ToteTimestamp>")
+TPAS_Array[A_Index,"LastSeqNo"] := Fn_QuickRegEx(FileContents_TPASXML,"<LastSeqNo>(.*)<\/LastSeqNo>")
+TPAS_Array[A_Index,"saveTotalTrans"] := Fn_QuickRegEx(FileContents_TPASXML,"<saveTotalTrans>(.*)<\/saveTotalTrans>")
+TPAS_Array[A_Index,"maxLoadRate"] := Fn_QuickRegEx(FileContents_TPASXML,"<maxLoadRate>(.*)<\/maxLoadRate>")
+TPAS_Array[A_Index,"CurrentLoadRate"] := Fn_QuickRegEx(FileContents_TPASXML,"<CurrentLoadRate>(.*)<\/CurrentLoadRate>")
+TPAS_Array[A_Index,"maxLatency"] := Fn_QuickRegEx(FileContents_TPASXML,"<maxLatency>(.*)<\/maxLatency>")
+TPAS_Array[A_Index,"avgLatency"] := Fn_QuickRegEx(FileContents_TPASXML,"<avgLatency>(.*)<\/avgLatency>")
 
 
 ;View Array
@@ -201,19 +214,19 @@ CheckTPASSession:
 Loop % TPAS_Array.MaxIndex()
 {
 DownloadHTML := TPAS_Array[A_Index,"HTML"]
-UrlDownloadToFile, %DownloadHTML% , % A_ScriptDir . "\Data\" . TPAS_Array[A_Index,"Name"] . "_HTML.txt"
-FileRead, FileContents2, % A_ScriptDir . "\Data\" . TPAS_Array[A_Index,"Name"] . "_HTML.txt"
-TPAS_Array[A_Index,"SessionNumber"] := Fn_QuickRegEx(FileContents2,"SESSION # \[ (\d*) \]")
+UrlDownloadToFile, %DownloadHTML% , % A_ScriptDir . "\Data\Temp\" . TPAS_Array[A_Index,"Name"] . "_HTML.txt"
+FileRead, FileContents_TPASSession, % A_ScriptDir . "\Data\Temp\" . TPAS_Array[A_Index,"Name"] . "_HTML.txt"
+TPAS_Array[A_Index,"SessionNumber"] := Fn_QuickRegEx(FileContents_TPASSession,"SESSION # \[ (\d*) \]")
 guicontrol, Text, GUI_TPASSession%A_Index%, % TPAS_Array[A_Index,"Name"] . "      #" . TPAS_Array[A_Index,"SessionNumber"]
 
 
 ;Now do Race Results
 DownloadBOP := TPAS_Array[A_Index,"BOP"]
-UrlDownloadToFile, %DownloadBOP% , % A_ScriptDir . "\Data\" . TPAS_Array[A_Index,"Name"] . "_BOPHTML.txt"
+UrlDownloadToFile, %DownloadBOP% , % A_ScriptDir . "\Data\Temp\" . TPAS_Array[A_Index,"Name"] . "_BOPHTML.txt"
 
 REG = NumberOfResultsEvents\">(\d*)<\/span> ;" ;Comment end
-FileRead, FileContents, % A_ScriptDir . "\Data\" . TPAS_Array[A_Index,"Name"] . "_BOPHTML.txt"
-TPAS_Array[A_Index,"ResultsNumber"] := Fn_QuickRegEx(FileContents,REG)
+FileRead, FileContents_RaceResults, % A_ScriptDir . "\Data\Temp\" . TPAS_Array[A_Index,"Name"] . "_BOPHTML.txt"
+TPAS_Array[A_Index,"ResultsNumber"] := Fn_QuickRegEx(FileContents_RaceResults,REG)
 
 
 guicontrol, Text, GUI_RaceResults%A_Index%, % TPAS_Array[A_Index,"ResultsNumber"]
@@ -352,6 +365,17 @@ Fn_Percent2Color(para_InputNumber,para_ThresholdPercent)
 Return ERROR
 }
 
+Fn_ConvertSecondstoMili(para_Seconds)
+{
+	RegExMatch(para_Seconds, "(\d+)", RE_Match)
+	If (RE_Match1 != "")
+	{
+	Return % RE_Match1 * 1000
+	}
+Return
+}
+
+
 ;UNUSED
 Fn_TPASArrayInsert(para_TPASIndex,para_Readline)
 {
@@ -412,7 +436,10 @@ FileGetSize, l_FileSize, %para_File%, k
 Return "ERROR"
 }
 
-
+Fn_TempMessage(Message, Timeout = 10)
+{
+MsgBox, 48,, %Message%, %Timeout%
+}
 
 
 ;/--\--/--\--/--\--/--\--/--\
@@ -434,13 +461,18 @@ The_FancyName := "Tote Health Monitor"
 AllFiles_Array := {Server:"", FileDir:"", Size:"", NewCheck:"", LastCheck:"", NotGrowingCounter: "", Result:""}
 AllFiles_ArraX = 0
 
-TPAS_Array := {Name:"", XML:"", HTML:"", BOP:"", ResultsNumber:"", SessionNumber:"", TFATimestamp:"", LastTFA:"", TotalTransactions:"", MaxTransRate:"", CurrentTransRate:"", TransQueueLen:"", ToteTimestamp:"", LastSeqNo:"", saveTotalTrans:"", maxLoadRate:"", CurrentLoadRate:"", maxLatency:"", avgLatency:"", LastTransactionTotal:""}
+TPAS_Array := {Name:"", XML:"", HTML:"", BOP:"", ResultsNumber:"", SessionNumber:"", TFATimestamp:"", LastTFA:"", TotalTransactions:"", MaxTransRate:"", CurrentTransRate:"", TransQueueLen:"", ToteTimestamp:"", LastSeqNo:"", saveTotalTrans:"", maxLoadRate:"", CurrentLoadRate:"", maxLatency:"", avgLatency:"", LastTransactionTotal:"", TransactionsThisMin:""}
+
+;Convert all user settings to miliseconds
+UserOption_CheckTPAS := Fn_ConvertSecondstoMili(Options_CheckTPAS)
+UserOption_CheckDataFiles := Fn_ConvertSecondstoMili(Options_CheckDataFiles)
+UserOption_CheckSessionNumber := Fn_ConvertSecondstoMili(Options_CheckSessionNumber)
 }
 
 
 Sb_InstallFiles()
 {
-FileCreateDir, %A_ScriptDir%\Data\
+FileCreateDir, %A_ScriptDir%\Data\Temp\
 FileInstall, Data\0.png, %A_ScriptDir%\Data\0.png, 1
 FileInstall, Data\1.png, %A_ScriptDir%\Data\1.png, 1
 FileInstall, Data\2.png, %A_ScriptDir%\Data\2.png, 1
