@@ -9,7 +9,7 @@
 ;Compile Options
 ;~~~~~~~~~~~~~~~~~~~~~
 StartUp()
-Version = v0.6.1
+Version = v0.7
 
 ;Dependencies
 #Include %A_ScriptDir%\Functions
@@ -66,16 +66,11 @@ Gui, Add, GroupBox, x6 y%GUI_y1% w310 h40, %The_SystemName%
 Gui, Add, Text, x16 y%GUI_y2% w30 h20 vGUI_Time%A_Index%,
 Gui, Add, Text, x90 y%GUI_y2% w40 h20 +Right vGUI_OldSize%A_Index%,
 Gui, Add, Text, x136 y%GUI_y2% w130 h20 vGUI_Size%A_Index%,
-Gui, Add, Picture, x230 y%GUI_y3% vGUI_Image%A_Index%, %A_ScriptDir%\Data\alf.png
+Gui, Add, Picture, x230 y%GUI_y3% vGUI_Image%A_Index%,
 }
 
 Loop, Read, %A_ScriptDir%\TPAS_dirs.txt
 {
-;Split data from each line in file
-;CODE
-
-
-
 GUI_y1 += 50 ;Box
 GUI_y2 += 50 ;Text
 GUI_y3 := GUI_y2 + 20
@@ -102,9 +97,9 @@ Gui, Add, Text, x10 y%GUI_y3% w60 h20 +Right, Results:
 Gui, Add, Text, x74 y%GUI_y3% vGUI_RaceResults%A_Index%, 000
 
 Gui, Add, Text, x146 y%GUI_y2% w80 h20 +Right, Load
-Gui, Add, Progress, x230 y%GUI_y2% w80 h14 vGUI_TPASLoad%A_Index%, 100
+Gui, Add, Progress, x230 y%GUI_y2% w80 h14 vGUI_TPASLoad%A_Index%, 1
 Gui, Add, Text, x146 y%GUI_y3% w80 h20 +Right, Latency
-Gui, Add, Progress, x230 y%GUI_y3% w80 h14 vGUI_TPASLatency%A_Index%, 100
+Gui, Add, Progress, x230 y%GUI_y3% w80 h14 vGUI_TPASLatency%A_Index%, 1
 GUI_y3 := GUI_y2 + 40
 
 ;Transactions also has a textbox with the current number
@@ -112,7 +107,7 @@ Gui, Add, Text, x120 y%GUI_y3% w80 h20 +Right, Transactions
 Gui, Font, s10 w700, Arial
 Gui, Add, Text, x204 y%GUI_y3% vGUI_TransactionNumber%A_Index%, 000
 Gui, Font, s10 w100, Arial
-Gui, Add, Progress, x230 y%GUI_y3% w80 h14 vGUI_TPASTransactions%A_Index%, 100
+Gui, Add, Progress, x230 y%GUI_y3% w80 h14 vGUI_TPASTransactions%A_Index%, 1
 
 
 
@@ -122,7 +117,7 @@ GUI_y2 += 42 ;Text
 
 GUI_Build()
 
-;UnComment to see whats in the array
+;UnComment to see what is in the array
 ;Array_Gui(AllFiles_Array)
 ;Array_Gui(TPAS_Array)
 
@@ -166,25 +161,36 @@ TPAS_Array[A_Index,"avgLatency"] := Fn_QuickRegEx(FileContents,"<avgLatency>(.*)
 
 ;View Array
 ;Array_Gui(TPAS_Array)
-
 guicontrol, Text, GUI_TPASTime%A_Index%, % TPAS_Array[A_Index,"TFATimestamp"]
 
-The_LoadPercent := (TPAS_Array[A_Index,"CurrentLoadRate"] / TPAS_Array[A_Index,"maxLoadRate"]) * 100
-The_LoadPercent := Fn_PercentCheck(The_LoadPercent)
-GuiControl,, GUI_TPASLoad%A_Index%, %The_LoadPercent%
+;Load
+	The_LoadPercent := (TPAS_Array[A_Index,"CurrentLoadRate"] / TPAS_Array[A_Index,"maxLoadRate"]) * 100
+	The_LoadPercent := Fn_PercentCheck(The_LoadPercent)
 
-The_LatencyPercent := (TPAS_Array[A_Index,"avgLatency"] / (TPAS_Array[A_Index,"maxLatency"] * 10)) * 100
-The_LatencyPercent := Fn_PercentCheck(The_LatencyPercent)
-GuiControl,, GUI_TPASLatency%A_Index%, %The_LatencyPercent%
+	The_Color := Fn_Percent2Color(The_LoadPercent, 79)
+	GuiControl,+c%The_Color%, GUI_TPASLoad%A_Index%, ;Change the color
+	GuiControl,, GUI_TPASLoad%A_Index%, %The_LoadPercent% ;Change the progressbar percentage
 
-The_TransactionsPercent := ((TPAS_Array[A_Index,"CurrentTransRate"]) / 100) * 100 ; TPAS_Array[A_Index,"MaxTransRate"] substituted for 100 as max
-The_TransactionsPercent := Fn_PercentCheck(The_TransactionsPercent)
-GuiControl,, GUI_TPASTransactions%A_Index%, %The_TransactionsPercent%
+;Latency
+	The_LatencyPercent := (TPAS_Array[A_Index,"avgLatency"] / (TPAS_Array[A_Index,"maxLatency"] * 10)) * 100
+	The_LatencyPercent := Fn_PercentCheck(The_LatencyPercent)
+
+	The_Color := Fn_Percent2Color(The_LatencyPercent, 50)
+	GuiControl,+c%The_Color%, GUI_TPASLatency%A_Index%, ;Change the color
+	GuiControl,, GUI_TPASLatency%A_Index%, %The_LatencyPercent%
+
+;Transactions
+	The_TransactionsPercent := ((TPAS_Array[A_Index,"CurrentTransRate"]) / 100) * 100 ; TPAS_Array[A_Index,"MaxTransRate"] substituted for 100 as max
+	The_TransactionsPercent := Fn_PercentCheck(The_TransactionsPercent)
+
+	The_Color := Fn_Percent2Color(The_TransactionsPercentt, 30)
+	GuiControl,+c%The_Color%, GUI_TPASTransactions%A_Index%, ;Change the color
+	GuiControl,, GUI_TPASTransactions%A_Index%, %The_TransactionsPercent%
 
 ;Transaction Rate Raw Number
-The_RecentTransactions := TPAS_Array[A_Index,"saveTotalTrans"] - TPAS_Array[A_Index,"LastTransactionTotal"]
-TPAS_Array[A_Index,"LastTransactionTotal"] := TPAS_Array[A_Index,"saveTotalTrans"]
-GuiControl, Text, GUI_TransactionNumber%A_Index%, % The_RecentTransactions
+	The_RecentTransactions := TPAS_Array[A_Index,"saveTotalTrans"] - TPAS_Array[A_Index,"LastTransactionTotal"]
+	TPAS_Array[A_Index,"LastTransactionTotal"] := TPAS_Array[A_Index,"saveTotalTrans"]
+	GuiControl, Text, GUI_TransactionNumber%A_Index%, % The_RecentTransactions
 }
 Return
 
@@ -308,8 +314,8 @@ Return "null"
 
 Fn_PercentCheck(para_Input)
 {
+;Checks to ensure that the input var is not under 1 or over 100, essentially for percentages
 para_Input := Ceil(para_Input)
-;Msgbox, %para_Input%
 	If (para_Input >= 100)
 	{
 	Return 100
@@ -321,6 +327,30 @@ para_Input := Ceil(para_Input)
 Return %para_Input%
 }
 
+
+Fn_Percent2Color(para_InputNumber,para_ThresholdPercent)
+{
+;Returns a color code for progress bar percentages. Kinda reverse order because otherwise it will return the first encountered Return
+
+	If (para_InputNumber <= para_ThresholdPercent) ;Green
+	{
+	Return "Green"
+	}
+	If (para_InputNumber > para_ThresholdPercent + 20) ;Red
+	{
+	Return "Red"
+	}
+	If (para_InputNumber > para_ThresholdPercent + 10) ;Orange
+	{
+	Return "ff7f27"
+	}
+	If (para_InputNumber > para_ThresholdPercent) ;Yellow
+	{
+	Return "Yellow"
+	}
+	
+Return ERROR
+}
 
 ;UNUSED
 Fn_TPASArrayInsert(para_TPASIndex,para_Readline)
