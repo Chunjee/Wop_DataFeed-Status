@@ -9,7 +9,7 @@
 ;Compile Options
 ;~~~~~~~~~~~~~~~~~~~~~
 StartUp()
-Version = v0.7
+Version = v0.7.1
 
 ;Dependencies
 #Include %A_ScriptDir%\Functions
@@ -39,12 +39,6 @@ Sb_InstallFiles()
 Fn_InitializeIni(Path_SettingsFile)
 Fn_LoadIni(Path_SettingsFile)
 Sb_GlobalNameSpace()
-
-
-;The_Settings = %A_ScriptDir%\settings.ini
-;Fn_InitializeIni(The_Settings)
-;Fn_LoadIni(The_Settings)
-
 
 
 GUI_x := 24
@@ -97,7 +91,9 @@ GUI_y3 := GUI_y2 + 20
 	TPAS_Array[A_Index,"HTML"] := TPASdata_short2
 	
 	TPAS_Array[A_Index,"BOP"] := "http://" . TPASdata_short3 . "/RaceDayController/Status.aspx"
-
+	
+	;Create Array layer for Wagers Per Min
+	TPAS_Array["WagersperMin" A_Index] := []
 	
 Gui, Font, s14, Arial
 Gui, Add, Text, x20 y%GUI_y2% vGUI_TPASTime%A_Index%, 00:00
@@ -115,18 +111,22 @@ Gui, Add, Text, x146 y%GUI_y3% w80 h20 +Right, Latency
 Gui, Add, Progress, x230 y%GUI_y3% w80 h14 vGUI_TPASLatency%A_Index%, 1
 GUI_y3 := GUI_y2 + 40
 
-;Transactions also has a textbox with the current number
+;Transactions has two progress bars and a textbox
 Gui, Add, Text, x120 y%GUI_y3% w80 h20 +Right, Transactions
 Gui, Font, s10 w700, Arial
 Gui, Add, Text, x204 y%GUI_y3% vGUI_TransactionNumber%A_Index%, 000
 Gui, Font, s10 w100, Arial
-Gui, Add, Progress, x230 y%GUI_y3% w80 h14 vGUI_TPASTransactions%A_Index%, 1
+
+Gui, Add, Progress, x230 y%GUI_y3% w80 h14 vGUI_TPASTransactionsPerMin%A_Index%, 1 ;Light Bar
+GUI_y35 := GUI_y3 + 13
+Gui, Add, Progress, x230 y%GUI_y35% w80 h3 vGUI_TPASTransactions%A_Index%, 1 ;Other Bar
 
 
 
 GUI_y1 += 42 ;Box
 GUI_y2 += 42 ;Text
 }
+
 
 GUI_Build()
 
@@ -147,6 +147,10 @@ SetTimer, CheckTPAS, %UserOption_CheckTPAS%
 Return
 
 
+
+#e::
+Array_Gui(TPAS_Array)
+Return
 
 
 CheckTPAS:
@@ -171,7 +175,6 @@ TPAS_Array[A_Index,"CurrentLoadRate"] := Fn_QuickRegEx(FileContents_TPASXML,"<Cu
 TPAS_Array[A_Index,"maxLatency"] := Fn_QuickRegEx(FileContents_TPASXML,"<maxLatency>(.*)<\/maxLatency>")
 TPAS_Array[A_Index,"avgLatency"] := Fn_QuickRegEx(FileContents_TPASXML,"<avgLatency>(.*)<\/avgLatency>")
 
-
 ;View Array
 ;Array_Gui(TPAS_Array)
 guicontrol, Text, GUI_TPASTime%A_Index%, % TPAS_Array[A_Index,"TFATimestamp"]
@@ -180,30 +183,45 @@ guicontrol, Text, GUI_TPASTime%A_Index%, % TPAS_Array[A_Index,"TFATimestamp"]
 	The_LoadPercent := (TPAS_Array[A_Index,"CurrentLoadRate"] / TPAS_Array[A_Index,"maxLoadRate"]) * 100
 	The_LoadPercent := Fn_PercentCheck(The_LoadPercent)
 
-	The_Color := Fn_Percent2Color(The_LoadPercent, 79)
+	The_Color := Fn_Percent2Color(The_LoadPercent, 81)
 	GuiControl,+c%The_Color%, GUI_TPASLoad%A_Index%, ;Change the color
 	GuiControl,, GUI_TPASLoad%A_Index%, %The_LoadPercent% ;Change the progressbar percentage
 
+	
 ;Latency
 	The_LatencyPercent := (TPAS_Array[A_Index,"avgLatency"] / (TPAS_Array[A_Index,"maxLatency"] * 10)) * 100
 	The_LatencyPercent := Fn_PercentCheck(The_LatencyPercent)
 
 	The_Color := Fn_Percent2Color(The_LatencyPercent, 50)
 	GuiControl,+c%The_Color%, GUI_TPASLatency%A_Index%, ;Change the color
-	GuiControl,, GUI_TPASLatency%A_Index%, %The_LatencyPercent%
+	GuiControl,, GUI_TPASLatency%A_Index%, %The_LatencyPercent% ;Change the progressbar percentage
 
+	
 ;Transactions
-	The_TransactionsPercent := ((TPAS_Array[A_Index,"CurrentTransRate"]) / 100) * 100 ; TPAS_Array[A_Index,"MaxTransRate"] substituted for 100 as max
+	The_TransactionsPercent := TPAS_Array[A_Index,"CurrentTransRate"] ; TPAS_Array[A_Index,"MaxTransRate"] substituted for 100 as max
 	The_TransactionsPercent := Fn_PercentCheck(The_TransactionsPercent)
 
 	The_Color := Fn_Percent2Color(The_TransactionsPercentt, 30)
 	GuiControl,+c%The_Color%, GUI_TPASTransactions%A_Index%, ;Change the color
-	GuiControl,, GUI_TPASTransactions%A_Index%, %The_TransactionsPercent%
+	GuiControl,, GUI_TPASTransactions%A_Index%, %The_TransactionsPercent% ;Change the progressbar percentage
 
+	
 ;Transaction Rate Raw Number
 	The_RecentTransactions := TPAS_Array[A_Index,"saveTotalTrans"] - TPAS_Array[A_Index,"LastTransactionTotal"]
 	TPAS_Array[A_Index,"LastTransactionTotal"] := TPAS_Array[A_Index,"saveTotalTrans"]
-	GuiControl, Text, GUI_TransactionNumber%A_Index%, % The_RecentTransactions
+
+;TransactionsPerMin Bar
+	;Insert Recent Transactions to the Array that remembers the Wagers for this min
+	The_WagersPerMin := Fn_InsertWagersPerMin(A_Index, The_RecentTransactions)
+	
+	GuiControl, Text, GUI_TransactionNumber%A_Index%, % The_WagersPerMin
+
+	The_TransactionsPerMinPERCENT := (The_WagersPerMin / 600) * 100
+	The_TransactionsPerMinPERCENT := Fn_PercentCheck(The_TransactionsPerMinPERCENT)
+	
+	The_Color := Fn_Percent2Color(The_TransactionsPercentt, 30)
+	GuiControl,+c%The_Color%, GUI_TPASTransactionsPerMin%A_Index%, ;Change the color
+	GuiControl,, GUI_TPASTransactionsPerMin%A_Index%, %The_TransactionsPerMinPERCENT% ;Change the progressbar percentage
 }
 Return
 
@@ -235,7 +253,6 @@ Return
 
 
 CheckFiles:
-
 ;Loop for each system in the array
 AllFiles_ArraX := AllFiles_Array.MaxIndex()
 Loop % AllFiles_Array.MaxIndex()
@@ -365,6 +382,32 @@ Fn_Percent2Color(para_InputNumber,para_ThresholdPercent)
 Return ERROR
 }
 
+
+Fn_Percent2ColorLight(para_InputNumber,para_ThresholdPercent)
+{
+;Same as the other function but has lighter colors
+
+	If (para_InputNumber <= para_ThresholdPercent) ;Green
+	{
+	Return "a3edb9"
+	}
+	If (para_InputNumber > para_ThresholdPercent + 20) ;Red
+	{
+	Return "f7999d"
+	}
+	If (para_InputNumber > para_ThresholdPercent + 10) ;Orange
+	{
+	Return "ffbd91"
+	}
+	If (para_InputNumber > para_ThresholdPercent) ;Yellow
+	{
+	Return "fff991"
+	}
+	
+Return ERROR
+}
+
+
 Fn_ConvertSecondstoMili(para_Seconds)
 {
 	RegExMatch(para_Seconds, "(\d+)", RE_Match)
@@ -376,6 +419,27 @@ Return
 }
 
 
+Fn_InsertWagersPerMin(para_Index, para_Transactions)
+{
+;Also returns average current wagers for this index value
+global
+
+The_MinAverage := 60 / (UserOption_CheckTPAS / 1000)
+	If (TPAS_Array["WagersperMin" para_Index].MaxIndex() >= The_MinAverage)
+	{
+	TPAS_Array["WagersperMin" para_Index].Remove(1)
+	}
+TPAS_Array["WagersperMin" para_Index].Insert(para_Transactions)
+
+The_WagersAverage := 0
+	Loop, % TPAS_Array["WagersperMin" para_Index].MaxIndex()
+	{
+	The_WagersAverage += TPAS_Array["WagersperMin" para_Index][A_Index]
+	}
+	Return %The_WagersAverage%
+}
+
+	
 ;UNUSED
 Fn_TPASArrayInsert(para_TPASIndex,para_Readline)
 {
@@ -402,7 +466,6 @@ Fn_CheckDataFile(para_FileDir)
 global
 
 AllFiles_Array[A_Index,"NewCheck"] := Fn_DataFileInfoTime(para_File)
-
 }
 
 
@@ -461,7 +524,9 @@ The_FancyName := "Tote Health Monitor"
 AllFiles_Array := {Server:"", FileDir:"", Size:"", NewCheck:"", LastCheck:"", NotGrowingCounter: "", Result:""}
 AllFiles_ArraX = 0
 
-TPAS_Array := {Name:"", XML:"", HTML:"", BOP:"", ResultsNumber:"", SessionNumber:"", TFATimestamp:"", LastTFA:"", TotalTransactions:"", MaxTransRate:"", CurrentTransRate:"", TransQueueLen:"", ToteTimestamp:"", LastSeqNo:"", saveTotalTrans:"", maxLoadRate:"", CurrentLoadRate:"", maxLatency:"", avgLatency:"", LastTransactionTotal:"", TransactionsThisMin:""}
+TPAS_Array := []
+
+;Old pointless array format ;TPAS_Array := {Name:"", XML:"", HTML:"", BOP:"", ResultsNumber:"", SessionNumber:"", TFATimestamp:"", LastTFA:"", TotalTransactions:"", MaxTransRate:"", CurrentTransRate:"", TransQueueLen:"", ToteTimestamp:"", LastSeqNo:"", saveTotalTrans:"", maxLoadRate:"", CurrentLoadRate:"", maxLatency:"", avgLatency:"", LastTransactionTotal:"", TransactionsThisMin:""}
 
 ;Convert all user settings to miliseconds
 UserOption_CheckTPAS := Fn_ConvertSecondstoMili(Options_CheckTPAS)
