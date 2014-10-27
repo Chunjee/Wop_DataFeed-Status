@@ -9,7 +9,7 @@
 ;Compile Options
 ;~~~~~~~~~~~~~~~~~~~~~
 StartUp()
-Version = v0.8
+Version = v0.9
 
 ;Dependencies
 #Include %A_ScriptDir%\Functions
@@ -55,12 +55,7 @@ CurrentDir := A_LoopReadLine
 	StringUpper, The_SystemName, The_SystemName
 	}
 
-
-
-
-
 AllFiles_Array[A_Index,"Server"] := The_SystemName
-Sb_UpdatePath()
 AllFiles_Array[A_Index,"NotGrowingCounter"] := 0
 
 
@@ -159,6 +154,7 @@ Loop % TPAS_Array.MaxIndex()
 {
 DownloadXML := TPAS_Array[A_Index,"XML"]
 ;Download file and read to Variable. Note that the text file is all one line so don't try to loop read a line at a time
+FileDelete, % A_ScriptDir . "\Data\Temp\" . TPAS_Array[A_Index,"Name"] . "_XML.txt"
 UrlDownloadToFile, %DownloadXML% , % A_ScriptDir . "\Data\Temp\" . TPAS_Array[A_Index,"Name"] . "_XML.txt"
 FileRead, FileContents_TPASXML, % A_ScriptDir . "\Data\Temp\" . TPAS_Array[A_Index,"Name"] . "_XML.txt"
 
@@ -203,7 +199,12 @@ guicontrol, Text, GUI_TPASTime%A_Index%, % TPAS_Array[A_Index,"TFATimestamp"]
 	
 	If (The_WagersPerMin > TPAS_Array[A_Index,"MaxTRateSeen"])
 	{
-	TPAS_Array[A_Index,"MaxTRateSeen"] := The_WagersPerMin + 999
+	TPAS_Array[A_Index,"MaxTRateSeen"] := The_WagersPerMin + 666
+		;Don't go higher than X for the MaxIndex
+		If (TPAS_Array[A_Index,"MaxTRateSeen"] > 1999)
+		{
+		TPAS_Array[A_Index,"MaxTRateSeen"] := 1999
+		}
 	}
 
 ;TransactionsPerMin Bar
@@ -243,6 +244,7 @@ CheckTPASSession:
 Loop % TPAS_Array.MaxIndex()
 {
 DownloadHTML := TPAS_Array[A_Index,"HTML"]
+FileDelete, % A_ScriptDir . "\Data\Temp\" . TPAS_Array[A_Index,"Name"] . "_HTML.txt"
 UrlDownloadToFile, %DownloadHTML% , % A_ScriptDir . "\Data\Temp\" . TPAS_Array[A_Index,"Name"] . "_HTML.txt"
 FileRead, FileContents_TPASSession, % A_ScriptDir . "\Data\Temp\" . TPAS_Array[A_Index,"Name"] . "_HTML.txt"
 TPAS_Array[A_Index,"SessionNumber"] := Fn_QuickRegEx(FileContents_TPASSession,"SESSION # \[ (\d*) \]")
@@ -251,6 +253,7 @@ guicontrol, Text, GUI_TPASSession%A_Index%, % TPAS_Array[A_Index,"Name"] . "    
 
 ;Now do Race Results
 DownloadBOP := TPAS_Array[A_Index,"BOP"]
+FileDelete, % A_ScriptDir . "\Data\Temp\" . TPAS_Array[A_Index,"Name"] . "_BOPHTML.txt"
 UrlDownloadToFile, %DownloadBOP% , % A_ScriptDir . "\Data\Temp\" . TPAS_Array[A_Index,"Name"] . "_BOPHTML.txt"
 
 REG = NumberOfResultsEvents\">(\d*)<\/span> ;" ;Comment end
@@ -288,6 +291,7 @@ AllFiles_Array[A_Index,"Size"] := Fn_DataFileInfoSize(The_Dir)
 guicontrol, Text, GUI_Time%A_Index%, % AllFiles_Array[A_Index,"NewCheck"]
 guicontrol, Text, GUI_Size%A_Index%, % AllFiles_Array[A_Index,"Size"] . "  (" . GUI_FileSizeMB . "MB)"
 
+
 	;If the Filesize is the same as last time it was checked
 	If (AllFiles_Array[A_Index,"LastCheck"] = AllFiles_Array[A_Index,"Size"])
 	{
@@ -298,6 +302,7 @@ guicontrol, Text, GUI_Size%A_Index%, % AllFiles_Array[A_Index,"Size"] . "  (" . 
 	{
 	AllFiles_Array[A_Index,"NotGrowingCounter"] := 0
 	}
+
 
 	;Set the color of the GUI picture
 	If (AllFiles_Array[A_Index,"NotGrowingCounter"] = 0) ;Green
@@ -318,6 +323,10 @@ guicontrol, Text, GUI_Size%A_Index%, % AllFiles_Array[A_Index,"Size"] . "  (" . 
 	{
 	ChosenImage := 3
 	Sb_FlashGUI() ; Flash the icon if it hasn't grown in this long
+	}
+	If(AllFiles_Array[A_Index,"TodaysFile"] = False) ;Only Yesterdays file exists? Special Icon
+	{
+	ChosenImage := 99
 	}
 
 GuiControl,, GUI_Image%A_Index%, %A_ScriptDir%\Data\%ChosenImage%.png
@@ -473,6 +482,7 @@ The_WagersAverage := 0
 	{
 	The_WagersAverage += TPAS_Array["WagersperMin" para_Index][A_Index]
 	}
+	The_WagersAverage := Floor(The_WagersAverage / The_MinAverage)
 	Return %The_WagersAverage%
 }
 
@@ -498,23 +508,29 @@ global TPAS_Array
 }
 
 
-Fn_CheckDataFile(para_FileDir)
-{
-global
-
-AllFiles_Array[A_Index,"NewCheck"] := Fn_DataFileInfoTime(para_File)
-}
+;Fn_CheckDataFile(para_FileDir)
+;{
+;global
+;
+;AllFiles_Array[A_Index,"NewCheck"] := Fn_DataFileInfoTime(para_FileDir)
+;}
 
 
 Fn_DataFileInfoTime(para_File)
 {
 l_FileModified := 
-FileGetTime, l_FileModified, %para_File%, M
-	If (l_FileModified != "")
+
+	;Do normal filesize checking if the file exists
+	IfExist, %para_File%
 	{
-	FormatTime, l_FileModified, %l_FileModified%, h:mm
-	Return %l_FileModified%
+	FileGetTime, l_FileModified, %para_File%, M
+		If (l_FileModified != "")
+		{
+		FormatTime, l_FileModified, %l_FileModified%, h:mm
+		Return %l_FileModified%
+		}
 	}
+	
 Return "ERROR"
 }
 
@@ -558,7 +574,7 @@ global
 
 The_FancyName := "Tote Health Monitor"
 
-AllFiles_Array := {Server:"", FileDir:"", Size:"", NewCheck:"", LastCheck:"", NotGrowingCounter: "", Result:""}
+AllFiles_Array := []
 AllFiles_ArraX = 0
 
 TPAS_Array := []
@@ -579,6 +595,7 @@ FileInstall, Data\0.png, %A_ScriptDir%\Data\0.png, 1
 FileInstall, Data\1.png, %A_ScriptDir%\Data\1.png, 1
 FileInstall, Data\2.png, %A_ScriptDir%\Data\2.png, 1
 FileInstall, Data\3.png, %A_ScriptDir%\Data\3.png, 1
+FileInstall, Data\99.png, %A_ScriptDir%\Data\99.png, 1
 }
 
 Sb_EmailOps()
@@ -589,14 +606,25 @@ Sb_EmailOps()
 Sb_UpdatePath()
 {
 global
+
+The_Yesterday := A_Now
+The_Yesterday += -1, d
 FormatTime, The_Today, %A_Now%, MM-dd-yyyy
+FormatTime, The_Yesterday, %A_Now%, MM-dd-yyyy
 
 	Loop % AllFiles_Array.MaxIndex()
 	{
 	The_Server := AllFiles_Array[A_Index,"Server"]
-	
 	FullPath = \\%The_Server%\LogFiles\%The_Today%\SGRData%The_Today%.txt
+	AllFiles_Array[A_Index,"TodaysFile"] := True
+		If (!FileExist(FullPath))
+		{
+		FullPath = \\%The_Server%\LogFiles\%The_Yesterday%\SGRData%The_Yesterday%.txt
+		AllFiles_Array[A_Index,"TodaysFile"] := False
+		}
 	AllFiles_Array[A_Index,"FileDir"] := FullPath
+	AllFiles_Array[A_Index,"Date_Today"] := The_Today
+	AllFiles_Array[A_Index,"Date_Yesterday"] := The_Yesterday
 	}
 
 }
