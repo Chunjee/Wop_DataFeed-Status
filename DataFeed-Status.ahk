@@ -312,6 +312,9 @@ guicontrol, Text, GUI_Size%A_Index%, % AllFiles_Array[A_Index,"Size"] . "  (" . 
 	If (AllFiles_Array[A_Index,"NotGrowingCounter"] = 1) ;Yellow
 	{
 	ChosenImage := 1
+		If(AllFiles_Array[A_Index,"TodaysFile"] = False) { ;Only Yesterdays file exists? Special Icon
+		ChosenImage := 99
+		}
 	}
 	If (AllFiles_Array[A_Index,"NotGrowingCounter"] = 2) ;Orange
 	{
@@ -324,10 +327,7 @@ guicontrol, Text, GUI_Size%A_Index%, % AllFiles_Array[A_Index,"Size"] . "  (" . 
 	ChosenImage := 3
 	Sb_FlashGUI() ; Flash the icon if it hasn't grown in this long
 	}
-	If(AllFiles_Array[A_Index,"TodaysFile"] = False) ;Only Yesterdays file exists? Special Icon
-	{
-	ChosenImage := 99
-	}
+	
 
 GuiControl,, GUI_Image%A_Index%, %A_ScriptDir%\Data\%ChosenImage%.png
 
