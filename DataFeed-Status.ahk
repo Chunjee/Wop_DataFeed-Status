@@ -9,7 +9,7 @@
 ;Compile Options
 ;~~~~~~~~~~~~~~~~~~~~~
 StartUp()
-Version = v0.9
+Version = v0.11
 
 ;Dependencies
 #Include %A_ScriptDir%\Functions
@@ -18,6 +18,7 @@ Version = v0.9
 
 ;For Debug Only
 #Include util_arrays
+#Include util_misc
 
 ;Included Files
 Sb_InstallFiles()
@@ -89,6 +90,7 @@ GUI_y3 := GUI_y2 + 20
 	
 	;Create Array layer for Wagers Per Min
 	TPAS_Array["WagersperMin" A_Index] := []
+	TPAS_Array["GraphData" A_Index] := []
 	
 Gui, Font, s14, Arial
 Gui, Add, Text, x20 y%GUI_y2% vGUI_TPASTime%A_Index%, 00:00
@@ -113,8 +115,9 @@ Gui, Add, Text, x202 y%GUI_y3% vGUI_TransactionNumber%A_Index%, 0000
 Gui, Font, s10 w100, Arial
 
 Gui, Add, Progress, x230 y%GUI_y3% w80 h14 vGUI_TPASTransactionsPerMin%A_Index%, 1 ;Wagers Bar
-GUI_y35 := GUI_y3 + 13
-Gui, Add, Progress, x230 y%GUI_y35% w80 h3 vGUI_TPASTransactions%A_Index%, 1 ;Other Bar
+GUI_y3_5 := GUI_y3 + 16
+Gui, Add, Progress, x116 y%GUI_y3% w10 h14 vertical vGUI_TPASTransactions%A_Index%, 1 ;Other very small trasactions bar
+
 
 
 
@@ -122,6 +125,22 @@ GUI_y1 += 42 ;Box
 GUI_y2 += 42 ;Text
 }
 
+GUI_y1 += 42
+GUI_y2 += 40
+
+GUI_y3 := 300
+GraphArray := []
+Gui, Add, GroupBox, x6 y%GUI_y1% w310 h60 vgui_TrafficGraphBox, Transaction Traffic:
+
+The_GraphMax := 280
+Loop %The_GraphMax% {
+GUI_y3 += -1
+;Random, rand, 40, 100
+Gui, Add, Progress, x%GUI_y3% y%GUI_y2% w1 h40 vertical vGUI_Graph%A_Index%, 0
+}
+
+GUI_y1 += 10 ;Box
+GUI_y2 += 10 ;Text
 
 GUI_Build()
 
@@ -137,6 +156,7 @@ Sleep 200
 SetTimer, CheckFiles, %UserOption_CheckDataFiles%
 SetTimer, CheckTPASSession, %UserOption_CheckSessionNumber%
 SetTimer, CheckTPAS, %UserOption_CheckTPAS%
+;SetTimer, CheckTPAS, 100
 SetTimer, Beat, 100
 
 
@@ -150,6 +170,7 @@ Return
 
 
 CheckTPAS:
+Combined_Transactions := 0
 Loop % TPAS_Array.MaxIndex()
 {
 DownloadXML := TPAS_Array[A_Index,"XML"]
@@ -179,38 +200,52 @@ guicontrol, Text, GUI_TPASTime%A_Index%, % TPAS_Array[A_Index,"TFATimestamp"]
 ;Load Bar
 	The_LoadPercent := (TPAS_Array[A_Index,"CurrentLoadRate"] / TPAS_Array[A_Index,"maxLoadRate"]) * 100
 	TPAS_Array[A_Index,"ProgressMax_Load"] := Fn_PercentCheck(The_LoadPercent)
+	The_LoadPercent := Fn_PercentCheck(The_LoadPercent)
 	
 ;Latency Bar
 	The_LatencyPercent := (TPAS_Array[A_Index,"avgLatency"] / (TPAS_Array[A_Index,"maxLatency"] * 10)) * 100
 	TPAS_Array[A_Index,"ProgressMax_Latency"] := Fn_PercentCheck(The_LatencyPercent)
-
 	
-;Transactions Bar
-	The_TransactionsPercent := TPAS_Array[A_Index,"CurrentTransRate"] * 10 ;This thing is still tricky
+;Transactions Bar (SMALL INVISIBLE)
+	The_TransactionsPercent := Floor(TPAS_Array[A_Index,"CurrentTransRate"] / TPAS_Array[A_Index,"MaxTRateSeen"]) *100 ;This thing is still tricky
 	TPAS_Array[A_Index,"ProgressMax_TransactionsRAW"] := Fn_PercentCheck(The_TransactionsPercent)
-
-;Transaction Rate Raw Number
+	;Debug_Msg(TPAS_Array[A_Index,"TransQueueLen"])
+	
+	;Transaction Rate Raw Number
 	;Insert Recent Transactions to the Array that remembers the Wagers for this min
 	The_RecentTransactions := TPAS_Array[A_Index,"saveTotalTrans"] - TPAS_Array[A_Index,"LastTransactionTotal"]
 	TPAS_Array[A_Index,"LastTransactionTotal"] := TPAS_Array[A_Index,"saveTotalTrans"]
 	The_WagersPerMin := Fn_InsertWagersPerMin(A_Index, The_RecentTransactions)
 	GuiControl, Text, GUI_TransactionNumber%A_Index%, % The_WagersPerMin
 	
+	;Scale of big transaction bar is determined here
 	
-	If (The_WagersPerMin > TPAS_Array[A_Index,"MaxTRateSeen"])
-	{
-	TPAS_Array[A_Index,"MaxTRateSeen"] := The_WagersPerMin + 666
-		;Don't go higher than X for the MaxIndex
-		If (TPAS_Array[A_Index,"MaxTRateSeen"] > 1999)
-		{
-		TPAS_Array[A_Index,"MaxTRateSeen"] := 1999
+		;Assume 400,700,1600 per min is the max unless that is broken; then use the max actually seen
+		If (The_WagersPerMin > TPAS_Array[A_Index,"MaxTRateSeen"] || The_WagersPerMin > 3333) {
+		TPAS_Array[A_Index,"MaxTRateSeen"] := The_WagersPerMin
+		GuiControl, Text, gui_TrafficGraphBox, Transaction Traffic: Super High
 		}
-	}
+		If (The_WagersPerMin < 2400 && The_WagersPerMin > 1600) {
+		TPAS_Array[A_Index,"MaxTRateSeen"] := 2400
+		GuiControl, Text, gui_TrafficGraphBox, Transaction Traffic: High
+		}
+		If (The_WagersPerMin < 1600 && The_WagersPerMin > 900) {
+		TPAS_Array[A_Index,"MaxTRateSeen"] := 1600
+		GuiControl, Text, gui_TrafficGraphBox, Transaction Traffic: Medium
+		}
+		If (The_WagersPerMin < 900) {
+		TPAS_Array[A_Index,"MaxTRateSeen"] := 900
+		GuiControl, Text, gui_TrafficGraphBox, Transaction Traffic: Low
+		}
+	;TPAS_Array[A_Index,"MaxTRateSeen"] := 600
 
 ;TransactionsPerMin Bar
 	The_TransactionsPerMinPERCENT := (The_WagersPerMin / TPAS_Array[A_Index,"MaxTRateSeen"]) * 100
 	TPAS_Array[A_Index,"ProgressMax_WagersPerMin"] := Fn_PercentCheck(The_TransactionsPerMinPERCENT)
+	Combined_Transactions += The_TransactionsPerMinPERCENT
 }
+Combined_Transactions := Fn_PercentCheck(Combined_Transactions)
+Fn_InsertGraphPercent(Combined_Transactions,1)
 Return
 
 
@@ -218,23 +253,27 @@ Return
 Beat:
 Loop % TPAS_Array.MaxIndex()
 {
+;Load
+The_TotalPercent := TPAS_Array[A_Index,"ProgressMax_Load"]
+The_ProgressPercent := TPAS_Array[A_Index,"Progress_Load"]
+TPAS_Array[A_Index,"Progress_Load"] := Fn_UpdateProgressBar("GUI_TPASLoad",The_TotalPercent,The_ProgressPercent,A_Index,91)
 
+;Latency
 The_TotalPercent := TPAS_Array[A_Index,"ProgressMax_Latency"]
 The_ProgressPercent := TPAS_Array[A_Index,"Progress_Latency"]
 TPAS_Array[A_Index,"Progress_Latency"] := Fn_UpdateProgressBar("GUI_TPASLatency",The_TotalPercent,The_ProgressPercent,A_Index,10)
 
+;Transactions
 The_TotalPercent := TPAS_Array[A_Index,"ProgressMax_WagersPerMin"]
 The_ProgressPercent := TPAS_Array[A_Index,"Progress_WagersPerMin"]
-TPAS_Array[A_Index,"Progress_WagersPerMin"] := Fn_UpdateProgressBar("GUI_TPASTransactionsPerMin",The_TotalPercent,The_ProgressPercent,A_Index,74)
+TPAS_Array[A_Index,"Progress_WagersPerMin"] := Fn_UpdateProgressBar("GUI_TPASTransactionsPerMin",The_TotalPercent,The_ProgressPercent,A_Index,81)
 
-The_TotalPercent := [A_Index,"ProgressMax_TransactionsRAW"]
+;Very Small Transactions Bar
+The_TotalPercent := TPAS_Array[A_Index,"ProgressMax_TransactionsRAW"]
 The_ProgressPercent := TPAS_Array[A_Index,"Progress_TransactionsRAW"]
-TPAS_Array[A_Index,"Progress_TransactionsRAW"] := Fn_UpdateProgressBar("GUI_TPASLoad",The_TotalPercent,The_ProgressPercent,A_Index,10)
-
-The_TotalPercent := TPAS_Array[A_Index,"ProgressMax_Load"]
-The_ProgressPercent := TPAS_Array[A_Index,"Progress_Load"]
-TPAS_Array[A_Index,"Progress_Load"] := Fn_UpdateProgressBar("GUI_TPASLoad",The_TotalPercent,The_ProgressPercent,A_Index,81)
+TPAS_Array[A_Index,"Progress_TransactionsRAW"] := Fn_UpdateProgressBar("GUI_TPASTransactions",The_TotalPercent,The_ProgressPercent,A_Index,10)
 }
+Fn_UpdateGraph()
 Return
 
 
@@ -352,24 +391,13 @@ ExitApp, 1
 ; Functions
 ;\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/
 
-Fn_QuickRegEx(para_Input,para_RegEx)
-{
-	RegExMatch(para_Input, para_RegEx, RE_Match)
-	If (RE_Match1 != "")
-	{
-	Return %RE_Match1%
-	}
-Return "null"
-}
-
 
 Fn_UpdateProgressBar(para_ProgressBarVar,para_Max,para_Current,para_Index,para_ColorThreshold)
 {
-	;If (para_Current = )
-	;{
-	;Msgbox, assigned to 0
-	;para_Current = 0
-	;}
+	If (para_Current = para_Max)
+	{
+	Return %para_Current%
+	}
 
 	If (para_Max > para_Current)
 	{
@@ -379,11 +407,11 @@ Fn_UpdateProgressBar(para_ProgressBarVar,para_Max,para_Current,para_Index,para_C
 	{
 	para_Current += -1
 	}
-	;Msgbox, %para_Max% vs %para_Current% --- 
+
 l_Color := Fn_Percent2Color(para_Current, para_ColorThreshold)
 GuiControl,+c%l_Color%, %para_ProgressBarVar%%para_Index%, ;Change the color
 GuiControl,, %para_ProgressBarVar%%para_Index%, %para_Current% ;Change the progressbar percentage
-;Msgbox, Returning %para_Current%
+
 Return %para_Current%
 }
 
@@ -416,14 +444,80 @@ Fn_Percent2Color(para_InputNumber,para_ThresholdPercent)
 	{
 	Return "ed1c24"
 	}
+		If (para_InputNumber > para_ThresholdPercent + 18) {
+		Return "ff3627"
+		}
+		If (para_InputNumber > para_ThresholdPercent + 18) {
+		Return "ff3b27"
+		}
+		If (para_InputNumber > para_ThresholdPercent + 18) {
+		Return "ff4027"
+		}
+		If (para_InputNumber > para_ThresholdPercent + 17) {
+		Return "ff5027"
+		}
+		If (para_InputNumber > para_ThresholdPercent + 16) {
+		Return "ff5f27"
+		}
+		If (para_InputNumber > para_ThresholdPercent + 15) {
+		Return "ff6427"
+		}
+		If (para_InputNumber > para_ThresholdPercent + 14) {
+		Return "ff6927"
+		}
+		If (para_InputNumber > para_ThresholdPercent + 13) {
+		Return "ff6e27"
+		}
+		If (para_InputNumber > para_ThresholdPercent + 12) {
+		Return "ff7327"
+		}
+		If (para_InputNumber > para_ThresholdPercent + 11) {
+		Return "ff7827"
+		}
 	If (para_InputNumber > para_ThresholdPercent + 10) ;Orange
 	{
 	Return "ff7f27"
 	}
+		If (para_InputNumber > para_ThresholdPercent + 9) {
+		Return "ff8827"
+		}
+		If (para_InputNumber > para_ThresholdPercent + 8) {
+		Return "ff9727"
+		}
+		If (para_InputNumber > para_ThresholdPercent + 7) {
+		Return "ffa127"
+		}
+		If (para_InputNumber > para_ThresholdPercent + 6) {
+		Return "ffab27"
+		}
+		If (para_InputNumber > para_ThresholdPercent + 5) {
+		Return "ffb027"
+		}
+		If (para_InputNumber > para_ThresholdPercent + 4) {
+		Return "ffbf27"
+		}
+		If (para_InputNumber > para_ThresholdPercent + 3) {
+		Return "ffbc04"
+		}
+		If (para_InputNumber > para_ThresholdPercent + 2) {
+		Return "ffbe03"
+		}
+		If (para_InputNumber > para_ThresholdPercent + 1) {
+		Return "ffc002"
+		}
 	If (para_InputNumber > para_ThresholdPercent) ;Yellow
 	{
 	Return "ffc300"
 	}
+		If (para_InputNumber > para_ThresholdPercent - 1) {
+		Return "cabf12"
+		}
+		If (para_InputNumber > para_ThresholdPercent - 2) {
+		Return "99bb23"
+		}
+		If (para_InputNumber > para_ThresholdPercent - 3) {
+		Return "6db732"
+		}
 	
 Return ERROR
 }
@@ -482,10 +576,40 @@ The_WagersAverage := 0
 	{
 	The_WagersAverage += TPAS_Array["WagersperMin" para_Index][A_Index]
 	}
-	The_WagersAverage := Floor(The_WagersAverage / The_MinAverage)
+	;The_WagersAverage := Floor(The_WagersAverage / The_MinAverage)
 	Return %The_WagersAverage%
 }
 
+
+Fn_InsertGraphPercent(para_Percent,para_Index)
+{
+global
+;TPAS_Array["GraphData" A_Index] := []
+
+	If (TPAS_Array["GraphData" para_Index].MaxIndex() >= The_GraphMax)
+	{
+	TPAS_Array["GraphData" para_Index].Remove(1)
+	}
+TPAS_Array["GraphData" para_Index].Insert(para_Percent)
+}
+
+Fn_UpdateGraph()
+{
+global
+The_X++
+	If (The_X > The_GraphMax) {
+	The_X := 1
+	}
+	;Loop, % TPAS_Array["GraphData" para_Index].MaxIndex()
+CurrentPercent := TPAS_Array["GraphData" 1][The_X]
+	;If (CurrentPercent < 10) {
+	;CurrentPercent = 10
+	;}
+;Msgbox, %CurrentPercent%
+l_Color := Fn_Percent2Color(CurrentPercent, 70)
+GuiControl,+c%l_Color%, GUI_Graph%The_X%, ;Change the color
+GuiControl,, GUI_Graph%The_X%, %CurrentPercent% ;Change the progressbar percentage
+}
 	
 ;UNUSED
 Fn_TPASArrayInsert(para_TPASIndex,para_Readline)
@@ -578,6 +702,7 @@ AllFiles_Array := []
 AllFiles_ArraX = 0
 
 TPAS_Array := []
+The_X := 0
 
 ;Old pointless array format ;TPAS_Array := {Name:"", XML:"", HTML:"", BOP:"", ResultsNumber:"", SessionNumber:"", TFATimestamp:"", LastTFA:"", TotalTransactions:"", MaxTransRate:"", CurrentTransRate:"", TransQueueLen:"", ToteTimestamp:"", LastSeqNo:"", saveTotalTrans:"", maxLoadRate:"", CurrentLoadRate:"", maxLatency:"", avgLatency:"", LastTransactionTotal:"", TransactionsThisMin:""}
 
@@ -643,7 +768,6 @@ FlashGUI:
 	}
 Return
 }
-
 
 GUI_Build()
 {
