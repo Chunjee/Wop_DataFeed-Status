@@ -9,7 +9,7 @@
 ;Compile Options
 ;~~~~~~~~~~~~~~~~~~~~~
 StartUp()
-Version = v0.11
+Version = v0.12.1
 
 ;Dependencies
 #Include %A_ScriptDir%\Functions
@@ -26,6 +26,7 @@ Sb_InstallFiles()
 ;/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\
 ; StartUp
 ;\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/
+Sb_RemoteShutDown() ;Allows for remote shutdown
 
 ;Check settings.ini. Quit if not found
 		IfExist, %A_ScriptDir%\Data\config.ini
@@ -125,22 +126,25 @@ GUI_y1 += 42 ;Box
 GUI_y2 += 42 ;Text
 }
 
-GUI_y1 += 42
-GUI_y2 += 40
 
-GUI_y3 := 300
-GraphArray := []
-Gui, Add, GroupBox, x6 y%GUI_y1% w310 h60 vgui_TrafficGraphBox, Transaction Traffic:
+	If (Options_TrafficMonitor = 1) {
+	GUI_y1 += 42
+	GUI_y2 += 40
 
-The_GraphMax := 280
-Loop %The_GraphMax% {
-GUI_y3 += -1
-;Random, rand, 40, 100
-Gui, Add, Progress, x%GUI_y3% y%GUI_y2% w1 h40 vertical vGUI_Graph%A_Index%, 0
-}
+	GUI_y3 := 300
+	GraphArray := []
+	Gui, Add, GroupBox, x6 y%GUI_y1% w310 h60 vgui_TrafficGraphBox, Transaction Traffic:
 
-GUI_y1 += 10 ;Box
-GUI_y2 += 10 ;Text
+	The_GraphMax := 280
+	Loop %The_GraphMax% {
+	GUI_y3 += -1
+	;Random, rand, 40, 100
+	Gui, Add, Progress, x%GUI_y3% y%GUI_y2% w1 h40 vertical vGUI_Graph%A_Index%, 0
+	}
+
+	GUI_y1 += 10 ;Box
+	GUI_y2 += 10 ;Text
+	}
 
 GUI_Build()
 
@@ -244,8 +248,10 @@ guicontrol, Text, GUI_TPASTime%A_Index%, % TPAS_Array[A_Index,"TFATimestamp"]
 	TPAS_Array[A_Index,"ProgressMax_WagersPerMin"] := Fn_PercentCheck(The_TransactionsPerMinPERCENT)
 	Combined_Transactions += The_TransactionsPerMinPERCENT
 }
+	If (Options_TrafficMonitor = 1) {
 Combined_Transactions := Fn_PercentCheck(Combined_Transactions)
 Fn_InsertGraphPercent(Combined_Transactions,1)
+	}
 Return
 
 
@@ -273,7 +279,9 @@ The_TotalPercent := TPAS_Array[A_Index,"ProgressMax_TransactionsRAW"]
 The_ProgressPercent := TPAS_Array[A_Index,"Progress_TransactionsRAW"]
 TPAS_Array[A_Index,"Progress_TransactionsRAW"] := Fn_UpdateProgressBar("GUI_TPASTransactions",The_TotalPercent,The_ProgressPercent,A_Index,10)
 }
-Fn_UpdateGraph()
+	If (Options_TrafficMonitor = 1) {
+	Fn_UpdateGraph()
+	}
 Return
 
 
