@@ -49,6 +49,9 @@ GUI_y2 := 36
 
 Loop, Read, %A_ScriptDir%\datafeed_dirs.txt
 {
+	If (InStr(A_LoopReadLine,";")) {
+	Continue
+	}
 CurrentDir := A_LoopReadLine
 	RegExMatch(CurrentDir, "\\\\(.+)\\", RE_Dir)
 	If (RE_Dir1 != "")
@@ -75,6 +78,9 @@ Gui, Add, Picture, x230 y%GUI_y3% vGUI_Image%A_Index%,
 
 Loop, Read, %A_ScriptDir%\TPAS_dirs.txt
 {
+	If (InStr(A_LoopReadLine,";")) {
+	Continue
+	}
 GUI_y1 += 50 ;Box
 GUI_y2 += 50 ;Text
 GUI_y3 := GUI_y2 + 20
@@ -101,7 +107,9 @@ Gui, Font, s10, Arial
 Gui, Add, GroupBox, x6 y%GUI_y1% w310 h80 vGUI_TPASSession%A_Index%, % "TPAS   " . TPAS_Array[A_Index,"Name"]
 
 Gui, Add, Text, x10 y%GUI_y3% w60 h20 +Right, Results:
+Gui, Font, s10 w700, Arial
 Gui, Add, Text, x74 y%GUI_y3% vGUI_RaceResults%A_Index%, 000
+Gui, Font, s10 w100, Arial
 
 Gui, Add, Text, x146 y%GUI_y2% w80 h20 +Right, Load
 Gui, Add, Progress, x230 y%GUI_y2% w80 h14 vGUI_TPASLoad%A_Index%, 1
@@ -114,6 +122,13 @@ Gui, Add, Text, x120 y%GUI_y3% w80 h20 +Right, Transactions
 Gui, Font, s10 w700, Arial
 Gui, Add, Text, x202 y%GUI_y3% vGUI_TransactionNumber%A_Index%, 0000
 Gui, Font, s10 w100, Arial
+
+;Tote Timestamp
+GUI_y3 := GUI_y2 + 40
+Gui, Font, s10 w700, Arial
+Gui, Add, Text, x22 y%GUI_y3% vGUI_ToteTimestamp%A_Index%, 00/00/0000
+Gui, Font, s10 w100, Arial
+
 
 Gui, Add, Progress, x230 y%GUI_y3% w80 h14 vGUI_TPASTransactionsPerMin%A_Index%, 1 ;Wagers Bar
 GUI_y3_5 := GUI_y3 + 16
@@ -184,6 +199,7 @@ UrlDownloadToFile, %DownloadXML% , % A_ScriptDir . "\Data\Temp\" . TPAS_Array[A_
 FileRead, FileContents_TPASXML, % A_ScriptDir . "\Data\Temp\" . TPAS_Array[A_Index,"Name"] . "_XML.txt"
 
 ;Scan for each arrays value and assign
+TPAS_Array[A_Index,"Date"] := Fn_QuickRegEx(FileContents_TPASXML,"Timestamp>(\d\d\/\d\d\/\d{4})")
 TPAS_Array[A_Index,"TFATimestamp"] := Fn_QuickRegEx(FileContents_TPASXML,"(\d\d:\d\d):\d\d<\/TFATimestamp>")
 TPAS_Array[A_Index,"TotalTransactions"] := Fn_QuickRegEx(FileContents_TPASXML,"<TotalTransactions>(.*)<\/TotalTransactions>")
 TPAS_Array[A_Index,"MaxTransRate"] := Fn_QuickRegEx(FileContents_TPASXML,"<MaxTransRate>(.*)<\/MaxTransRate>")
@@ -308,7 +324,28 @@ FileRead, FileContents_RaceResults, % A_ScriptDir . "\Data\Temp\" . TPAS_Array[A
 TPAS_Array[A_Index,"ResultsNumber"] := Fn_QuickRegEx(FileContents_RaceResults,REG)
 
 
-guicontrol, Text, GUI_RaceResults%A_Index%, % TPAS_Array[A_Index,"ResultsNumber"]
+
+	;Race results Red if "null"
+	If (TPAS_Array[A_Index,"ResultsNumber"] = "null") {
+	Gui, Font, s10 w1000 cRed, Arial
+	} Else {
+	Gui, Font, s10 w100 cBlack, Arial
+	}
+GuiControl, Text, GUI_RaceResults%A_Index%, % TPAS_Array[A_Index,"ResultsNumber"]
+GuiControl, Font, GUI_ToteTimestamp%A_Index%
+Gui, Font, s10 w100 cBlack, Arial
+
+
+;Date Stamp
+FormatTime, SystemDate, A_Now, MM/dd/yyyy
+	If (SystemDate != TPAS_Array[A_Index,"Date"]) {
+	Gui, Font, s10 w1000 cRed, Arial
+	} Else {
+	Gui, Font, s10 w100 cBlack, Arial
+	}
+GuiControl, Text, GUI_ToteTimestamp%A_Index%, % TPAS_Array[A_Index,"Date"]
+GuiControl, Font, GUI_ToteTimestamp%A_Index%
+Gui, Font, s10 w100 cBlack, Arial
 }
 Return
 
