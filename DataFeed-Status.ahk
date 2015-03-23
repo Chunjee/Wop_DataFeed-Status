@@ -28,7 +28,7 @@ Sb_InstallFiles()
 ;\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/
 Sb_RemoteShutDown() ;Allows for remote shutdown
 
-;Check settings.ini. Quit if not found
+;;Check settings.ini. Quit if not found
 		IfExist, %A_ScriptDir%\Data\config.ini
 		{
 		Path_SettingsFile = %A_ScriptDir%\Data\config.ini
@@ -65,7 +65,7 @@ AllFiles_Array[A_Index,"NotGrowingCounter"] := 0
 
 
 
-;GUI Stuffs
+;; Create GUI
 GUI_y1 += 50 ;Box
 GUI_y2 += 50 ;Text
 GUI_y3 := GUI_y2 - 3 ;Image
@@ -144,23 +144,72 @@ GUI_y2 += 42 ;Text
 
 	If (Options_TrafficMonitor = 1) {
 	GUI_y1 += 42
-	GUI_y2 += 40
+	GUI_y2 += 44
 
-	GUI_y3 := 300
+	GUI_y3 := 310
 	GraphArray := []
 	Gui, Add, GroupBox, x6 y%GUI_y1% w310 h60 vgui_TrafficGraphBox, Transaction Traffic:
 
-	The_GraphMax := 280
-	Loop %The_GraphMax% {
-	GUI_y3 += -1
-	;Random, rand, 40, 100
-	Gui, Add, Progress, x%GUI_y3% y%GUI_y2% w1 h40 vertical vGUI_Graph%A_Index%, 0
-	}
+	The_GraphMax := 300
+		Loop %The_GraphMax% {
+		GUI_y3 += -1
+		;Random, rand, 60, 100
+		Gui, Add, Progress, x%GUI_y3% y%GUI_y2% cgreen w1 h40 vertical vGUI_Graph%A_Index%, %rand%
+		}
 
 	GUI_y1 += 10 ;Box
 	GUI_y2 += 10 ;Text
 	}
 
+	
+Services_Array := []
+	;Understand Services to monitor into an array
+	Settings.Monitor_Services := 1
+	X := 0
+	If (1) {
+		Loop, %A_ScriptDir%\Data\Services\*.txt
+		{
+		LabelName := 
+		LabelName := Fn_QuickRegEx(A_LoopFileName,"(\w+)\.txt")
+		;FileRead, File_AllContents, %A_LoopFileFullPath%
+			Loop, Read, %A_LoopFileFullPath%
+			{
+				If (InStr(A_LoopReadLine,"Server_Type:")) {
+				ServerType := Fn_QuickRegEx(A_LoopReadLine,"Server_Type:(.+)")
+				Continue
+				}
+				If (InStr(A_LoopReadLine,"Service_Name:")) {
+				ServiceName := Fn_QuickRegEx(A_LoopReadLine,"Service_Name:(.+)")
+				Continue
+				}
+				;Insert the ServerName if not already existing
+				If (!Fn_InArray(Services_Array,ServerType,"ServerType")) {
+				;TempArray := []
+				;TempArray["ServerType"] := ServerType
+				X++
+				Services_Array[X, "ServerType"] := ServerType
+				;Services_Array[X] := []
+				}
+				;Services_Array[%ServerType%]Insert(ServiceName)
+			}
+		}
+	}
+	
+	;Temp Note: 
+	;	TPAS_Array["WagersperMin" para_Index].Insert(para_Transactions)
+	;	The_WagersAverage += TPAS_Array["WagersperMin" para_Index][A_Index]
+	;TPAS_Array["WagersperMin" A_Index] := []
+
+For index, obj in Services_Array {
+Msgbox, % Services_Array[index, "ServerType"]
+}
+
+;View Array
+Array_Gui(Services_Array)
+ExitApp
+	
+	
+;;Show GUI if all creation was successful
 GUI_Build()
 
 ;UnComment to see what is in the array
@@ -187,18 +236,18 @@ Return
 Array_Gui(TPAS_Array)
 Return
 
-
+;;Check TPAS/TJS
 CheckTPAS:
 Combined_Transactions := 0
 Loop % TPAS_Array.MaxIndex()
 {
 DownloadXML := TPAS_Array[A_Index,"XML"]
-;Download file and read to Variable. Note that the text file is all one line so don't try to loop read a line at a time
+;;Download file and read to Variable. Note that the text file is all one line so don't try to loop read a line at a time
 FileDelete, % A_ScriptDir . "\Data\Temp\" . TPAS_Array[A_Index,"Name"] . "_XML.txt"
 UrlDownloadToFile, %DownloadXML% , % A_ScriptDir . "\Data\Temp\" . TPAS_Array[A_Index,"Name"] . "_XML.txt"
 FileRead, FileContents_TPASXML, % A_ScriptDir . "\Data\Temp\" . TPAS_Array[A_Index,"Name"] . "_XML.txt"
 
-;Scan for each arrays value and assign
+;;Scan for each value from TPAS/TJS and assign to array for storage
 TPAS_Array[A_Index,"Date"] := Fn_QuickRegEx(FileContents_TPASXML,"Timestamp>(\d\d\/\d\d\/\d{4})")
 TPAS_Array[A_Index,"TFATimestamp"] := Fn_QuickRegEx(FileContents_TPASXML,"(\d\d:\d\d):\d\d<\/TFATimestamp>")
 TPAS_Array[A_Index,"TotalTransactions"] := Fn_QuickRegEx(FileContents_TPASXML,"<TotalTransactions>(.*)<\/TotalTransactions>")
@@ -217,6 +266,8 @@ TPAS_Array[A_Index,"avgLatency"] := Fn_QuickRegEx(FileContents_TPASXML,"<avgLate
 ;Array_Gui(TPAS_Array)
 guicontrol, Text, GUI_TPASTime%A_Index%, % TPAS_Array[A_Index,"TFATimestamp"]
 
+
+;;Calculate each bar and save as target progress bar percentage
 ;Load Bar
 	The_LoadPercent := (TPAS_Array[A_Index,"CurrentLoadRate"] / TPAS_Array[A_Index,"maxLoadRate"]) * 100
 	TPAS_Array[A_Index,"ProgressMax_Load"] := Fn_PercentCheck(The_LoadPercent)
@@ -240,39 +291,53 @@ guicontrol, Text, GUI_TPASTime%A_Index%, % TPAS_Array[A_Index,"TFATimestamp"]
 	
 	;Scale of big transaction bar is determined here
 	
-		;Assume 400,700,1600 per min is the max unless that is broken; then use the max actually seen
-		If (The_WagersPerMin > TPAS_Array[A_Index,"MaxTRateSeen"] || The_WagersPerMin > 3333) {
-		TPAS_Array[A_Index,"MaxTRateSeen"] := The_WagersPerMin
-		GuiControl, Text, gui_TrafficGraphBox, Transaction Traffic: Super High
+		;Assume 400,700,1600 per min is the max unless that is broken; then use the max actually seen. Also only do one 1st TJS (Ignore NJ, others)
+		If (A_Index = 1) {
+			If (The_WagersPerMin > TPAS_Array[A_Index,"MaxTRateSeen"] || The_WagersPerMin > 3333) {
+			TPAS_Array[A_Index,"MaxTRateSeen"] := The_WagersPerMin
+			GuiControl, Text, gui_TrafficGraphBox, Transaction Traffic: Super High
+			}
+			If (The_WagersPerMin < 2400 && The_WagersPerMin > 1600) {
+			TPAS_Array[A_Index,"MaxTRateSeen"] := 2400
+			GuiControl, Text, gui_TrafficGraphBox, Transaction Traffic: High
+			}
+			If (The_WagersPerMin < 1600 && The_WagersPerMin > 900) {
+			TPAS_Array[A_Index,"MaxTRateSeen"] := 1600
+			GuiControl, Text, gui_TrafficGraphBox, Transaction Traffic: Medium
+			}
+			If (The_WagersPerMin < 900) {
+			TPAS_Array[A_Index,"MaxTRateSeen"] := 900
+			GuiControl, Text, gui_TrafficGraphBox, Transaction Traffic: Low
+			}
+		;Copy MaxRate to all others in array
+		TPAS_Array[A_Index,"MaxTRateSeen"] := TPAS_Array[1,"MaxTRateSeen"]
 		}
-		If (The_WagersPerMin < 2400 && The_WagersPerMin > 1600) {
-		TPAS_Array[A_Index,"MaxTRateSeen"] := 2400
-		GuiControl, Text, gui_TrafficGraphBox, Transaction Traffic: High
-		}
-		If (The_WagersPerMin < 1600 && The_WagersPerMin > 900) {
-		TPAS_Array[A_Index,"MaxTRateSeen"] := 1600
-		GuiControl, Text, gui_TrafficGraphBox, Transaction Traffic: Medium
-		}
-		If (The_WagersPerMin < 900) {
-		TPAS_Array[A_Index,"MaxTRateSeen"] := 900
-		GuiControl, Text, gui_TrafficGraphBox, Transaction Traffic: Low
-		}
-	;TPAS_Array[A_Index,"MaxTRateSeen"] := 600
+		
 
 ;TransactionsPerMin Bar
 	The_TransactionsPerMinPERCENT := (The_WagersPerMin / TPAS_Array[A_Index,"MaxTRateSeen"]) * 100
 	TPAS_Array[A_Index,"ProgressMax_WagersPerMin"] := Fn_PercentCheck(The_TransactionsPerMinPERCENT)
-	Combined_Transactions += The_TransactionsPerMinPERCENT
+	
+	;For Graph data
+	Combined_Transactions += The_WagersPerMin
 }
 	If (Options_TrafficMonitor = 1) {
-Combined_Transactions := Fn_PercentCheck(Combined_Transactions)
-Fn_InsertGraphPercent(Combined_Transactions,1)
+	Fn_InsertGraphPercent(Combined_Transactions,1)
+	
+		GraphData_MaxValue := 900
+		Loop, % TPAS_Array.GraphData1.MaxIndex() {
+			If (TPAS_Array["GraphData" 1][A_Index] > GraphData_MaxValue) {
+			GraphData_MaxValue := TPAS_Array["GraphData" 1][A_Index]
+			}
+		}
 	}
+	
 Return
 
 
 
 Beat:
+;;Update GUI every 100milliseconds if (Done to give smooth progress bar movement) 
 Loop % TPAS_Array.MaxIndex()
 {
 ;Load
@@ -314,7 +379,7 @@ TPAS_Array[A_Index,"SessionNumber"] := Fn_QuickRegEx(FileContents_TPASSession,"S
 guicontrol, Text, GUI_TPASSession%A_Index%, % TPAS_Array[A_Index,"Name"] . "      #" . TPAS_Array[A_Index,"SessionNumber"]
 
 
-;Now do Race Results
+;Download BOP RaceDayEventCollector page and collect number of results and date
 DownloadBOP := TPAS_Array[A_Index,"BOP"]
 FileDelete, % A_ScriptDir . "\Data\Temp\" . TPAS_Array[A_Index,"Name"] . "_BOPHTML.txt"
 UrlDownloadToFile, %DownloadBOP% , % A_ScriptDir . "\Data\Temp\" . TPAS_Array[A_Index,"Name"] . "_BOPHTML.txt"
@@ -338,6 +403,7 @@ Gui, Font, s10 w100 cBlack, Arial
 
 ;Date Stamp
 FormatTime, SystemDate, A_Now, MM/dd/yyyy
+	;;Paint text red if date on BOP does not match system date
 	If (SystemDate != TPAS_Array[A_Index,"Date"]) {
 	Gui, Font, s10 w1000 cRed, Arial
 	} Else {
@@ -362,10 +428,10 @@ Sb_UpdatePath()
 
 The_Dir := AllFiles_Array[A_Index,"FileDir"]
 
-;Get Modified Time and assign it to the Array
+;;Get Modified Time form each DataCollector text file and assign it to the Array
 AllFiles_Array[A_Index,"NewCheck"] := Fn_DataFileInfoTime(The_Dir)
 
-;Get File Size and assign it to the Array
+;;Get File Size and assign it to the Array
 AllFiles_Array[A_Index,"Size"] := Fn_DataFileInfoSize(The_Dir)
 
 	;Convert to MB for display GUI
@@ -403,7 +469,7 @@ guicontrol, Text, GUI_Size%A_Index%, % AllFiles_Array[A_Index,"Size"] . "  (" . 
 	If (AllFiles_Array[A_Index,"NotGrowingCounter"] = 2) ;Orange
 	{
 	ChosenImage := 2
-	Sb_FlashGUI() ; Flash the icon if it hasn't grown in this long
+	Sb_FlashGUI() ;; Flash the icon if it hasn't grown in this long
 	Sb_EmailOps() ; An Empty function
 	}
 	If (AllFiles_Array[A_Index,"NotGrowingCounter"] >= 3) ;Red
@@ -630,7 +696,7 @@ Fn_InsertGraphPercent(para_Percent,para_Index)
 {
 global
 ;TPAS_Array["GraphData" A_Index] := []
-
+	
 	If (TPAS_Array["GraphData" para_Index].MaxIndex() >= The_GraphMax)
 	{
 	TPAS_Array["GraphData" para_Index].Remove(1)
@@ -642,18 +708,23 @@ Fn_UpdateGraph()
 {
 global
 The_X++
+		
+	;If The_X has gone beyond the scope of the whole graph; go back to the start
 	If (The_X > The_GraphMax) {
 	The_X := 1
 	}
-	;Loop, % TPAS_Array["GraphData" para_Index].MaxIndex()
-CurrentPercent := TPAS_Array["GraphData" 1][The_X]
-	;If (CurrentPercent < 10) {
-	;CurrentPercent = 10
-	;}
-;Msgbox, %CurrentPercent%
-l_Color := Fn_Percent2Color(CurrentPercent, 70)
+	
+;The_X gone past all relevant data in the graph array; go back to the start
+l_CurrentPercent := ((TPAS_Array["GraphData" 1][The_X] / GraphData_MaxValue) * 100)
+l_CurrentPercent := Fn_PercentCheck(l_CurrentPercent)
+	If (l_CurrentPercent = "") {
+	The_X := 1
+	Return
+	}
+
+l_Color := Fn_Percent2Color(l_CurrentPercent, 70)
 GuiControl,+c%l_Color%, GUI_Graph%The_X%, ;Change the color
-GuiControl,, GUI_Graph%The_X%, %CurrentPercent% ;Change the progressbar percentage
+GuiControl,, GUI_Graph%The_X%, %l_CurrentPercent% ;Change the progressbar percentage
 }
 	
 ;UNUSED
