@@ -1,13 +1,17 @@
 #################
+## Project Specific
+#################
+bin/
+tmp/
+Data/Temp/
+
+#################
 ## Eclipse
 #################
 
 *.pydevproject
 .project
 .metadata
-bin/
-tmp/
-Data/
 *.tmp
 *.bak
 *.swp

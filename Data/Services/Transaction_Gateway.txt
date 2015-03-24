@@ -1,0 +1,3 @@
+Server_Type:TGP
+Service_Name:Transaction Gateway
+VIAOPSTGP01
