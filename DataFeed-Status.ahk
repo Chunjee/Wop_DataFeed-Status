@@ -143,8 +143,6 @@ GUI_y1 += 42
 GUI_y2 += 44
 
 	If (Options_TrafficMonitor = 1) {
-
-
 	GUI_y3 := 310
 	GraphArray := []
 	Gui, Add, GroupBox, x6 y%GUI_y1% w310 h60 vgui_TrafficGraphBox, Transaction Traffic:
@@ -163,11 +161,14 @@ GUI_y2 += 44
 	GUI_y1 += 60
 	}
 	
-Services_Array := []
+	
+	
+
+	If (Options_ServicesMonitor = 1) {
+	Services_Array := []
 	;Understand Services to monitor into an array
 	Settings.Monitor_Services := 1
 	X := 0
-	If (0) {
 		Loop, %A_ScriptDir%\Data\Services\*.txt
 		{
 		LabelName := 
@@ -194,7 +195,7 @@ Services_Array := []
 				;Services_Array[%ServerType%]Insert(ServiceName)
 			}
 		}
-	}
+	
 	
 	;Temp Note: 
 	;	TPAS_Array["WagersperMin" para_Index].Insert(para_Transactions)
@@ -209,11 +210,10 @@ Services_Array := []
 ;Array_Gui(Services_Array)
 ;ExitApp
 
-;For canvas thingy
-
 ;GUI_y1 += 50
 Gui, Add, Progress, x10 y%GUI_y1% w305 h200 hWndhWnd ; Progress controls make ideal canvases
 GUI_y2 += 200
+	}
 
 ;;Show GUI if all creation was successful
 GUI_Build()
@@ -247,7 +247,7 @@ class CustomButton
 	Draw(TextColor)
 	{
 		critical
-		this.GDI.FillRectangle(0, 0, this.GDI.CliWidth, this.GDI.CliHeight, 0xC0C0C0, TextColor)
+		this.GDI.FillRectangle(0, 0, this.GDI.CliWidth, this.GDI.CliHeight, 0x008000, TextColor)
 		this.GDI.BitBlt()
 	}
 	
@@ -331,10 +331,9 @@ guicontrol, Text, GUI_TPASTime%A_Index%, % TPAS_Array[A_Index,"TFATimestamp"]
 			TPAS_Array[A_Index,"MaxTRateSeen"] := 900
 			GuiControl, Text, gui_TrafficGraphBox, Transaction Traffic: Low
 			}
-		;Copy MaxRate to all others in array
-		TPAS_Array[A_Index,"MaxTRateSeen"] := TPAS_Array[1,"MaxTRateSeen"]
 		}
-		
+	;Copy MaxRate to all others in array
+	TPAS_Array[A_Index,"MaxTRateSeen"] := TPAS_Array[1,"MaxTRateSeen"]
 
 ;TransactionsPerMin Bar
 	The_TransactionsPerMinPERCENT := (The_WagersPerMin / TPAS_Array[A_Index,"MaxTRateSeen"]) * 100
