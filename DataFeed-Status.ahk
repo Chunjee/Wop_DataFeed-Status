@@ -14,7 +14,7 @@ Version = v0.12.1
 ;Dependencies
 #Include %A_ScriptDir%\Functions
 #Include inireadwrite
-#Include internet_fileread
+#Include class_GDI
 
 ;For Debug Only
 #Include util_arrays
@@ -135,16 +135,15 @@ GUI_y3_5 := GUI_y3 + 16
 Gui, Add, Progress, x116 y%GUI_y3% w10 h14 vertical vGUI_TPASTransactions%A_Index%, 1 ;Other very small trasactions bar
 
 
-
-
 GUI_y1 += 42 ;Box
 GUI_y2 += 42 ;Text
 }
 
+GUI_y1 += 42
+GUI_y2 += 44
 
 	If (Options_TrafficMonitor = 1) {
-	GUI_y1 += 42
-	GUI_y2 += 44
+
 
 	GUI_y3 := 310
 	GraphArray := []
@@ -159,14 +158,16 @@ GUI_y2 += 42 ;Text
 
 	GUI_y1 += 10 ;Box
 	GUI_y2 += 10 ;Text
+	
+	
+	GUI_y1 += 60
 	}
-
 	
 Services_Array := []
 	;Understand Services to monitor into an array
 	Settings.Monitor_Services := 1
 	X := 0
-	If (1) {
+	If (0) {
 		Loop, %A_ScriptDir%\Data\Services\*.txt
 		{
 		LabelName := 
@@ -200,18 +201,22 @@ Services_Array := []
 	;	The_WagersAverage += TPAS_Array["WagersperMin" para_Index][A_Index]
 	;TPAS_Array["WagersperMin" A_Index] := []
 
-For index, obj in Services_Array {
-Msgbox, % Services_Array[index, "ServerType"]
-}
+;For index, obj in Services_Array {
+;Msgbox, % Services_Array[index, "ServerType"]
+;}
 
 ;View Array
-Array_Gui(Services_Array)
-ExitApp
-	
-	
+;Array_Gui(Services_Array)
+;ExitApp
+
+;For canvas thingy
+
+;GUI_y1 += 50
+Gui, Add, Progress, x10 y%GUI_y1% w305 h200 hWndhWnd ; Progress controls make ideal canvases
+GUI_y2 += 200
+
 ;;Show GUI if all creation was successful
 GUI_Build()
-
 ;UnComment to see what is in the array
 ;Array_Gui(AllFiles_Array)
 ;Array_Gui(TPAS_Array)
@@ -227,9 +232,26 @@ SetTimer, CheckTPAS, %UserOption_CheckTPAS%
 ;SetTimer, CheckTPAS, 100
 SetTimer, Beat, 100
 
-
+global ALF := new CustomButton(hWnd)
+ALF.Draw
 Return
 
+class CustomButton
+{
+    __New(hWnd)
+    {
+        this.GDI := new GDI(hWnd)
+        this.hWnd := hWnd
+        this.Draw(0x000000)
+    }
+	Draw(TextColor)
+	{
+		critical
+		this.GDI.FillRectangle(0, 0, this.GDI.CliWidth, this.GDI.CliHeight, 0xC0C0C0, TextColor)
+		this.GDI.BitBlt()
+	}
+	
+}
 
 
 #e::
@@ -920,7 +942,6 @@ Menu, MyMenuBar, Add, &Help, :HelpMenu
 Gui, Menu, MyMenuBar
 
 ;Create the final size of the GUI
-GUI_y2 += 40
 Gui, Show, h%GUI_y2% w330, %The_FancyName%
 Return
 
