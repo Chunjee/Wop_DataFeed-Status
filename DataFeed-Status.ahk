@@ -1,7 +1,8 @@
 ﻿;/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\
 ; Description
 ;\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/
-; Renames FreePPs pdf files; then generates html for use with the normal FreePPs process.
+; Originally intended to show overnight when the SDL file had arrived. Also shows if said file stops growing.
+; Displays TJS and BOP data
 
 
 
@@ -9,19 +10,22 @@
 ;Compile Options
 ;~~~~~~~~~~~~~~~~~~~~~
 StartUp()
-Version = v0.12.1
+The_ProjectName := "Tote Health Monitor"
+The_VersionName = v0.12.4
 
 ;Dependencies
 #Include %A_ScriptDir%\Functions
 #Include inireadwrite
 #Include class_GDI
+#Include util_misc
 
 ;For Debug Only
 #Include util_arrays
-#Include util_misc
+
 
 ;Included Files
 Sb_InstallFiles()
+
 
 ;/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\
 ; StartUp
@@ -38,6 +42,7 @@ Sb_RemoteShutDown() ;Allows for remote shutdown
 		Fn_TempMessage("Could not find config file. Quitting in 10 seconds")
 		ExitApp, 1
 		}
+		
 Fn_InitializeIni(Path_SettingsFile)
 Fn_LoadIni(Path_SettingsFile)
 Sb_GlobalNameSpace()
@@ -111,6 +116,7 @@ Gui, Font, s10 w700, Arial
 Gui, Add, Text, x74 y%GUI_y3% vGUI_RaceResults%A_Index%, 000
 Gui, Font, s10 w100, Arial
 
+;Load and Latency progress bars
 Gui, Add, Text, x146 y%GUI_y2% w80 h20 +Right, Load
 Gui, Add, Progress, x230 y%GUI_y2% w80 h14 vGUI_TPASLoad%A_Index%, 1
 Gui, Add, Text, x146 y%GUI_y3% w80 h20 +Right, Latency
@@ -132,7 +138,8 @@ Gui, Font, s10 w100, Arial
 
 Gui, Add, Progress, x230 y%GUI_y3% w80 h14 vGUI_TPASTransactionsPerMin%A_Index%, 1 ;Wagers Bar
 GUI_y3_5 := GUI_y3 + 16
-Gui, Add, Progress, x116 y%GUI_y3% w10 h14 vertical vGUI_TPASTransactions%A_Index%, 1 ;Other very small trasactions bar
+GUI_y3 += 14
+Gui, Add, Progress, x230 y%GUI_y3% w80 h4 vGUI_TPASDataBaseLoads%A_Index%, 1 ;DataBase Loads
 
 
 GUI_y1 += 42 ;Box
@@ -143,28 +150,28 @@ GUI_y1 += 42
 GUI_y2 += 44
 
 	If (Options_TrafficMonitor = 1) {
-	GUI_y3 := 310
+	GUI_y3 := 10
 	GraphArray := []
 	Gui, Add, GroupBox, x6 y%GUI_y1% w310 h60 vgui_TrafficGraphBox, Transaction Traffic:
 
 	The_GraphMax := 300
 		Loop %The_GraphMax% {
-		GUI_y3 += -1
+		GUI_y3 += 1
 		;Random, rand, 60, 100
 		Gui, Add, Progress, x%GUI_y3% y%GUI_y2% cgreen w1 h40 vertical vGUI_Graph%A_Index%, %rand%
 		}
 
 	GUI_y1 += 10 ;Box
-	GUI_y2 += 10 ;Text
-	
-	
-	GUI_y1 += 60
+	GUI_y2 += 50 ;Text
 	}
 	
-	
-	
+If (Options_NeulionMonitor = 9) {
+GUI_y1 += 60	
+GUI_y2 += 30
+Gui, Add, Progress, x30 y%GUI_y1% w260 h14 cgreen vGUI_Neu, 100
+}
 
-	If (Options_ServicesMonitor = 1) {
+	If (Options_ServicesMonitor = 9) {
 	Services_Array := []
 	;Understand Services to monitor into an array
 	Settings.Monitor_Services := 1
@@ -185,31 +192,42 @@ GUI_y2 += 44
 				Continue
 				}
 				;Insert the ServerName if not already existing
-				If (!Fn_InArray(Services_Array,ServerType,"ServerType")) {
+				If (!Fn_InArray(Services_Array,ServerType)) {
 				;TempArray := []
 				;TempArray["ServerType"] := ServerType
-				X++
-				Services_Array[X, "ServerType"] := ServerType
+				Services_Array.Insert(ServerType)
+				X = alf
+				;Services_Array.Insert(ServerType)
 				;Services_Array[X] := []
 				}
-				;Services_Array[%ServerType%]Insert(ServiceName)
+				If (Fn_InArray(Services_Array,ServerType)) {
+				;Msbox, % alf
+				}
+				;Msgbox, %A_Index% %ServerType%  %ServiceName% %A_LoopReadLine%
+				Services_Array[ServerType].Insert()
+				Services_Array["ServerType","ServiceName"].Insert(A_LoopReadLine)
 			}
 		}
-	
-	
 	;Temp Note: 
 	;	TPAS_Array["WagersperMin" para_Index].Insert(para_Transactions)
 	;	The_WagersAverage += TPAS_Array["WagersperMin" para_Index][A_Index]
 	;TPAS_Array["WagersperMin" A_Index] := []
 
-;For index, obj in Services_Array {
-;Msgbox, % Services_Array[index, "ServerType"]
-;}
+
 
 ;View Array
 ;Array_Gui(Services_Array)
-;ExitApp
 
+
+For index, obj in Services_Array {
+Msgbox, % index . "  " . obj
+	For index2, obj2 in obj {
+	Msgbox, % index2 . "  " . obj2
+	}
+}
+
+
+ExitApp
 ;GUI_y1 += 50
 Gui, Add, Progress, x10 y%GUI_y1% w305 h200 hWndhWnd ; Progress controls make ideal canvases
 GUI_y2 += 200
@@ -217,6 +235,8 @@ GUI_y2 += 200
 
 ;;Show GUI if all creation was successful
 GUI_Build()
+	
+	
 ;UnComment to see what is in the array
 ;Array_Gui(AllFiles_Array)
 ;Array_Gui(TPAS_Array)
@@ -261,8 +281,7 @@ Return
 ;;Check TPAS/TJS
 CheckTPAS:
 Combined_Transactions := 0
-Loop % TPAS_Array.MaxIndex()
-{
+Loop % TPAS_Array.MaxIndex() {
 DownloadXML := TPAS_Array[A_Index,"XML"]
 ;;Download file and read to Variable. Note that the text file is all one line so don't try to loop read a line at a time
 FileDelete, % A_ScriptDir . "\Data\Temp\" . TPAS_Array[A_Index,"Name"] . "_XML.txt"
@@ -286,7 +305,26 @@ TPAS_Array[A_Index,"avgLatency"] := Fn_QuickRegEx(FileContents_TPASXML,"<avgLate
 
 ;View Array
 ;Array_Gui(TPAS_Array)
-guicontrol, Text, GUI_TPASTime%A_Index%, % TPAS_Array[A_Index,"TFATimestamp"]
+
+	If (1) {
+	;Color TPAS TimeStamp Red if older than 3 mins.
+	FormatTime, Time_Now,,hhmm
+	Time_Now := "19990101" . Time_Now . "00"
+
+	Time_TPAS := StrReplace(TPAS_Array[A_Index,"TFATimestamp"],":")
+	Time_TPAS := "19990101" . Time_TPAS . "00"
+
+	EnvSub, Time_TPAS, Time_Now, minutes
+		If (Time_TPAS > 3) {
+		Gui, Font, s14 w1000 cRed, Arial
+		} Else {
+		Gui, Font, s14 w100 cBlack, Arial
+		}
+
+	GuiControl, Font, GUI_TPASTime%A_Index%
+	Gui, Font, s10 w100 cBlack, Arial
+	}
+GuiControl, Text, GUI_TPASTime%A_Index%, % TPAS_Array[A_Index,"TFATimestamp"]
 
 
 ;;Calculate each bar and save as target progress bar percentage
@@ -299,21 +337,29 @@ guicontrol, Text, GUI_TPASTime%A_Index%, % TPAS_Array[A_Index,"TFATimestamp"]
 	The_LatencyPercent := (TPAS_Array[A_Index,"avgLatency"] / (TPAS_Array[A_Index,"maxLatency"] * 10)) * 100
 	TPAS_Array[A_Index,"ProgressMax_Latency"] := Fn_PercentCheck(The_LatencyPercent)
 	
-;Transactions Bar (SMALL INVISIBLE)
-	The_TransactionsPercent := Floor(TPAS_Array[A_Index,"CurrentTransRate"] / TPAS_Array[A_Index,"MaxTRateSeen"]) *100 ;This thing is still tricky
-	TPAS_Array[A_Index,"ProgressMax_TransactionsRAW"] := Fn_PercentCheck(The_TransactionsPercent)
-	;Debug_Msg(TPAS_Array[A_Index,"TransQueueLen"])
+						;Transactions Bar (SMALL INVISIBLE) - DEPRECIATED
+						;	The_TransactionsPercent := Floor(TPAS_Array[A_Index,"CurrentTransRate"] / TPAS_Array[A_Index,"MaxTRateSeen"]) *100
+						;	TPAS_Array[A_Index,"ProgressMax_TransactionsRAW"] := Fn_PercentCheck(The_TransactionsPercent)
+						;	;Debug_Msg(TPAS_Array[A_Index,"TransQueueLen"])
 	
 	;Transaction Rate Raw Number
 	;Insert Recent Transactions to the Array that remembers the Wagers for this min
-	The_RecentTransactions := TPAS_Array[A_Index,"saveTotalTrans"] - TPAS_Array[A_Index,"LastTransactionTotal"]
-	TPAS_Array[A_Index,"LastTransactionTotal"] := TPAS_Array[A_Index,"saveTotalTrans"]
+	The_RecentTransactions := TPAS_Array[A_Index,"TotalTransactions"] - TPAS_Array[A_Index,"LastTransactionTotal"]
+	TPAS_Array[A_Index,"LastTransactionTotal"] := TPAS_Array[A_Index,"TotalTransactions"]
 	The_WagersPerMin := Fn_InsertWagersPerMin(A_Index, The_RecentTransactions)
 	GuiControl, Text, GUI_TransactionNumber%A_Index%, % The_WagersPerMin
 	
-	;Scale of big transaction bar is determined here
+	;DataBaseLoads
+	The_RecentDataBaseLoads := TPAS_Array[A_Index,"saveTotalTrans"] - TPAS_Array[A_Index,"LastDataBaseLoad"]
+	TPAS_Array[A_Index,"LastDataBaseLoad"] := TPAS_Array[A_Index,"saveTotalTrans"]
+	TPAS_Array[A_Index,"ProgressMax_DataBaseLoad"] := The_RecentDataBaseLoads
 	
-		;Assume 400,700,1600 per min is the max unless that is broken; then use the max actually seen. Also only do one 1st TJS (Ignore NJ, others)
+	;For Graph data
+	Combined_Transactions += The_WagersPerMin
+	
+	
+		
+		;Assume 900,1600,2400 per min is the max unless that is passed; then use the max actually seen. Also only do one 1st TJS (Ignore NJ, others)
 		If (A_Index = 1) {
 			If (The_WagersPerMin > TPAS_Array[A_Index,"MaxTRateSeen"] || The_WagersPerMin > 3333) {
 			TPAS_Array[A_Index,"MaxTRateSeen"] := The_WagersPerMin
@@ -332,28 +378,45 @@ guicontrol, Text, GUI_TPASTime%A_Index%, % TPAS_Array[A_Index,"TFATimestamp"]
 			GuiControl, Text, gui_TrafficGraphBox, Transaction Traffic: Low
 			}
 		}
-	;Copy MaxRate to all others in array
-	TPAS_Array[A_Index,"MaxTRateSeen"] := TPAS_Array[1,"MaxTRateSeen"]
 
 ;TransactionsPerMin Bar
-	The_TransactionsPerMinPERCENT := (The_WagersPerMin / TPAS_Array[A_Index,"MaxTRateSeen"]) * 100
+	The_TransactionsPerMinPERCENT := (The_WagersPerMin / 5000) * 100
 	TPAS_Array[A_Index,"ProgressMax_WagersPerMin"] := Fn_PercentCheck(The_TransactionsPerMinPERCENT)
-	
-	;For Graph data
-	Combined_Transactions += The_WagersPerMin
 }
+
+;Find the Max Rate
 	If (Options_TrafficMonitor = 1) {
 	Fn_InsertGraphPercent(Combined_Transactions,1)
-	
-		GraphData_MaxValue := 900
+		;;Find biggest transaction rate found in graph data
 		Loop, % TPAS_Array.GraphData1.MaxIndex() {
-			If (TPAS_Array["GraphData" 1][A_Index] > GraphData_MaxValue) {
-			GraphData_MaxValue := TPAS_Array["GraphData" 1][A_Index]
+			If (TPAS_Array["GraphData" 1][A_Index] > GraphData_MaxFound) {
+			GraphData_MaxFound := TPAS_Array["GraphData" 1][A_Index]
 			}
 		}
+		GraphData_MaxValue := GraphData_MaxFound * 2
 	}
-	
+
+If (WatchNuelion = 1) {
+	;Download Neulion Data every blah blah and check for valid
+	DownloadNeu = https://www.tvg.com/ajax/video/id/live-schedule
+	FileDelete, % A_ScriptDir . "\Data\Temp\Neu.txt"
+	UrlDownloadToFile, %DownloadNeu% , % A_ScriptDir . "\Data\Temp\Neu.txt"
+	FileRead, FileContents_Neu, % A_ScriptDir . "\Data\Temp\Neu.txt"
+	If (Fn_QuickRegEx(FileContents_Neu,"(\[\])") != "null") {
+	GuiControl,+cgreen, GUI_Neu, ;Change the color
+	} Else {
+	GuiControl,+cred, GUI_Neu, ;Change the color
+	}
+}
 Return
+
+
+GuiControl,, GUI_Graph%The_X%, %l_CurrentPercent% ;Change the progressbar percentage
+
+
+
+
+
 
 
 
@@ -364,22 +427,27 @@ Loop % TPAS_Array.MaxIndex()
 ;Load
 The_TotalPercent := TPAS_Array[A_Index,"ProgressMax_Load"]
 The_ProgressPercent := TPAS_Array[A_Index,"Progress_Load"]
-TPAS_Array[A_Index,"Progress_Load"] := Fn_UpdateProgressBar("GUI_TPASLoad",The_TotalPercent,The_ProgressPercent,A_Index,91)
+TPAS_Array[A_Index,"Progress_Load"] := Fn_UpdateProgressBar("GUI_TPASLoad",The_TotalPercent,The_ProgressPercent,A_Index,95) ;Formerly 91
 
 ;Latency
 The_TotalPercent := TPAS_Array[A_Index,"ProgressMax_Latency"]
 The_ProgressPercent := TPAS_Array[A_Index,"Progress_Latency"]
-TPAS_Array[A_Index,"Progress_Latency"] := Fn_UpdateProgressBar("GUI_TPASLatency",The_TotalPercent,The_ProgressPercent,A_Index,10)
+TPAS_Array[A_Index,"Progress_Latency"] := Fn_UpdateProgressBar("GUI_TPASLatency",The_TotalPercent,The_ProgressPercent,A_Index,10) ;This is low because it never moves
 
 ;Transactions
 The_TotalPercent := TPAS_Array[A_Index,"ProgressMax_WagersPerMin"]
 The_ProgressPercent := TPAS_Array[A_Index,"Progress_WagersPerMin"]
-TPAS_Array[A_Index,"Progress_WagersPerMin"] := Fn_UpdateProgressBar("GUI_TPASTransactionsPerMin",The_TotalPercent,The_ProgressPercent,A_Index,81)
+TPAS_Array[A_Index,"Progress_WagersPerMin"] := Fn_UpdateProgressBar("GUI_TPASTransactionsPerMin",The_TotalPercent,The_ProgressPercent,A_Index,95) ;Formerly 81
 
-;Very Small Transactions Bar
-The_TotalPercent := TPAS_Array[A_Index,"ProgressMax_TransactionsRAW"]
-The_ProgressPercent := TPAS_Array[A_Index,"Progress_TransactionsRAW"]
-TPAS_Array[A_Index,"Progress_TransactionsRAW"] := Fn_UpdateProgressBar("GUI_TPASTransactions",The_TotalPercent,The_ProgressPercent,A_Index,10)
+;DataBase Load
+The_TotalPercent := TPAS_Array[A_Index,"ProgressMax_WagersPerMin"]
+The_ProgressPercent := TPAS_Array[A_Index,"Progress_WagersPerMin"]
+TPAS_Array[A_Index,"Progress_DataBaseLoad"] := Fn_UpdateProgressBar("GUI_TPASDataBaseLoads",The_TotalPercent,The_ProgressPercent,A_Index,95) ;Formerly 81
+
+;Very Small Transactions Bar - DEPRECIATED
+;The_TotalPercent := TPAS_Array[A_Index,"ProgressMax_TransactionsRAW"]
+;The_ProgressPercent := TPAS_Array[A_Index,"Progress_TransactionsRAW"]
+;TPAS_Array[A_Index,"Progress_TransactionsRAW"] := Fn_UpdateProgressBar("GUI_TPASTransactions",The_TotalPercent,The_ProgressPercent,A_Index,10)
 }
 	If (Options_TrafficMonitor = 1) {
 	Fn_UpdateGraph()
@@ -393,34 +461,38 @@ CheckTPASSession:
 Loop % TPAS_Array.MaxIndex()
 {
 DownloadHTML := TPAS_Array[A_Index,"HTML"]
+
 FileDelete, % A_ScriptDir . "\Data\Temp\" . TPAS_Array[A_Index,"Name"] . "_HTML.txt"
 UrlDownloadToFile, %DownloadHTML% , % A_ScriptDir . "\Data\Temp\" . TPAS_Array[A_Index,"Name"] . "_HTML.txt"
 FileRead, FileContents_TPASSession, % A_ScriptDir . "\Data\Temp\" . TPAS_Array[A_Index,"Name"] . "_HTML.txt"
+
 TPAS_Array[A_Index,"SessionNumber"] := Fn_QuickRegEx(FileContents_TPASSession,"SESSION # \[ (\d*) \]")
 guicontrol, Text, GUI_TPASSession%A_Index%, % TPAS_Array[A_Index,"Name"] . "      #" . TPAS_Array[A_Index,"SessionNumber"]
 
 
 ;Download BOP RaceDayEventCollector page and collect number of results and date
 DownloadBOP := TPAS_Array[A_Index,"BOP"]
+
 FileDelete, % A_ScriptDir . "\Data\Temp\" . TPAS_Array[A_Index,"Name"] . "_BOPHTML.txt"
 UrlDownloadToFile, %DownloadBOP% , % A_ScriptDir . "\Data\Temp\" . TPAS_Array[A_Index,"Name"] . "_BOPHTML.txt"
+FileRead, FileContents_RaceResults, % A_ScriptDir . "\Data\Temp\" . TPAS_Array[A_Index,"Name"] . "_BOPHTML.txt"
 
 REG = NumberOfResultsEvents\">(\d*)<\/span> ;" ;Comment end
-FileRead, FileContents_RaceResults, % A_ScriptDir . "\Data\Temp\" . TPAS_Array[A_Index,"Name"] . "_BOPHTML.txt"
 TPAS_Array[A_Index,"ResultsNumber"] := Fn_QuickRegEx(FileContents_RaceResults,REG)
+}
 
-
-
+;GUI Updating is handled on a 2nd loop because downloading the file causes a lag or something
+Loop % TPAS_Array.MaxIndex()
+{
 	;Race results Red if "null"
 	If (TPAS_Array[A_Index,"ResultsNumber"] = "null") {
-	Gui, Font, s10 w1000 cRed, Arial
+	Gui, Font, s10 w700 cRed, Arial
 	} Else {
-	Gui, Font, s10 w100 cBlack, Arial
+	Gui, Font, s10 w700 cBlack, Arial
 	}
 GuiControl, Text, GUI_RaceResults%A_Index%, % TPAS_Array[A_Index,"ResultsNumber"]
-GuiControl, Font, GUI_ToteTimestamp%A_Index%
+GuiControl, Font, GUI_RaceResults%A_Index%
 Gui, Font, s10 w100 cBlack, Arial
-
 
 ;Date Stamp
 FormatTime, SystemDate, A_Now, MM/dd/yyyy
@@ -510,15 +582,6 @@ Return
 
 
 
-
-
-GuiClose:
-ExitApp, 1
-
-
-
-
-
 ;/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\
 ; Functions
 ;\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/
@@ -556,7 +619,7 @@ para_Input := Ceil(para_Input)
 	{
 	Return 100
 	}
-	If (para_Input <= 1)
+	If (para_Input <= 0)
 	{
 	Return 1
 	}
@@ -742,32 +805,14 @@ l_CurrentPercent := Fn_PercentCheck(l_CurrentPercent)
 	The_X := 1
 	Return
 	}
+	If (l_CurrentPercent = 0) {
+	Return
+	}
 
 l_Color := Fn_Percent2Color(l_CurrentPercent, 70)
 GuiControl,+c%l_Color%, GUI_Graph%The_X%, ;Change the color
 GuiControl,, GUI_Graph%The_X%, %l_CurrentPercent% ;Change the progressbar percentage
 }
-	
-;UNUSED
-Fn_TPASArrayInsert(para_TPASIndex,para_Readline)
-{
-global TPAS_Array
-;Example Input: <TFATimestamp>08/24/2014 09:17:50</TFATimestamp>
-	;Grab what the Tag is
-	RegExMatch(para_Readline, "<(\w*)>", RE_Tag)
-	If (RE_Tag1 != "")
-	{
-	l_XMLElement := RE_Tag1
-		;Grab Everything within the tag
-		RegExMatch(para_Readline, ">(.*)<", RE_Value)
-		If (RE_Value1 != "")
-		{
-		;Put it into the Array. Note that para_TPASIndex is the Index value assigned to each TPAS
-		TPAS_Array[para_TPASIndex,l_XMLElement] := RE_Value1
-		}
-	}
-}
-
 
 ;Fn_CheckDataFile(para_FileDir)
 ;{
@@ -823,17 +868,15 @@ MsgBox, 48,, %Message%, %Timeout%
 ; Subroutines
 ;\--/--\--/--\--/--\--/--\--/
 
-;No Tray icon because it takes 2 seconds; Do not allow running more then one instance at a time
 StartUp() {
-#NoTrayIcon
-#SingleInstance force
+SetBatchLines -1 ;Go as fast as CPU will allow
+#NoTrayIcon ;No tray icon
+#SingleInstance Force ;Do not allow running more then one instance at a time
 }
 
 
 Sb_GlobalNameSpace() {
 global
-
-The_FancyName := "Tote Health Monitor"
 
 AllFiles_Array := []
 AllFiles_ArraX = 0
@@ -841,9 +884,7 @@ AllFiles_ArraX = 0
 TPAS_Array := []
 The_X := 0
 
-;Old pointless array format ;TPAS_Array := {Name:"", XML:"", HTML:"", BOP:"", ResultsNumber:"", SessionNumber:"", TFATimestamp:"", LastTFA:"", TotalTransactions:"", MaxTransRate:"", CurrentTransRate:"", TransQueueLen:"", ToteTimestamp:"", LastSeqNo:"", saveTotalTrans:"", maxLoadRate:"", CurrentLoadRate:"", maxLatency:"", avgLatency:"", LastTransactionTotal:"", TransactionsThisMin:""}
-
-;Convert all user settings to miliseconds
+;Convert all user settings to milliseconds
 UserOption_CheckTPAS := Fn_ConvertSecondstoMili(Options_CheckTPAS)
 UserOption_CheckDataFiles := Fn_ConvertSecondstoMili(Options_CheckDataFiles)
 UserOption_CheckSessionNumber := Fn_ConvertSecondstoMili(Options_CheckSessionNumber)
@@ -910,14 +951,15 @@ GUI_Build()
 {
 global
 
+;GUI Always on top variable
 GUI_AOT := 1
 Gui +AlwaysOnTop
 
 ;Title
 Gui, Font, s14 w70, Arial
-Gui, Add, Text, x2 y4 w330 h40 +Center, %The_FancyName%
+Gui, Add, Text, x2 y4 w330 h40 +Center, %The_ProjectName%
 Gui, Font, s10 w70, Arial
-Gui, Add, Text, x276 y0 w50 h20 +Right, %Version%
+Gui, Add, Text, x276 y0 w50 h20 +Right, %The_VersionName%
 
 ;Gui, Add, CheckBox, x30 y30 Checked1 gSwitchOnOff, Always On Top
 
@@ -941,7 +983,7 @@ Menu, MyMenuBar, Add, &Help, :HelpMenu
 Gui, Menu, MyMenuBar
 
 ;Create the final size of the GUI
-Gui, Show, h%GUI_y2% w330, %The_FancyName%
+Gui, Show, h%GUI_y2% w330, %The_ProjectName%
 Return
 
 ;Menu Shortcuts
@@ -966,11 +1008,13 @@ Gui -AlwaysOnTop
 GUI_AOT := 0
 Menu, FileMenu, UnCheck, Window &Always Top
 }
-gui, submit, NoHide
+Gui, submit, NoHide
 Return
 
 Menu_File-Restart:
 Reload
 Menu_File-Exit:
 ExitApp
+GuiClose:
+ExitApp, 1
 }
