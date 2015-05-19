@@ -11,7 +11,7 @@
 ;~~~~~~~~~~~~~~~~~~~~~
 StartUp()
 The_ProjectName := "Tote Health Monitor"
-The_VersionName = v0.12.4
+The_VersionName = v0.13
 
 ;Dependencies
 #Include %A_ScriptDir%\Functions
@@ -138,8 +138,8 @@ Gui, Font, s10 w100, Arial
 
 Gui, Add, Progress, x230 y%GUI_y3% w80 h14 vGUI_TPASTransactionsPerMin%A_Index%, 1 ;Wagers Bar
 GUI_y3_5 := GUI_y3 + 16
-GUI_y3 += 14
-Gui, Add, Progress, x230 y%GUI_y3% w80 h4 vGUI_TPASDataBaseLoads%A_Index%, 1 ;DataBase Loads
+GUI_y3 += 13
+Gui, Add, Progress, x230 y%GUI_y3% w80 h1 vGUI_TPASDataBaseLoads%A_Index%, 1 ;DataBase Loads
 
 
 GUI_y1 += 42 ;Box
@@ -165,11 +165,11 @@ GUI_y2 += 44
 	GUI_y2 += 50 ;Text
 	}
 	
-If (Options_NeulionMonitor = 9) {
-GUI_y1 += 60	
-GUI_y2 += 30
-Gui, Add, Progress, x30 y%GUI_y1% w260 h14 cgreen vGUI_Neu, 100
-}
+	If (Options_NeulionMonitor = 9) {
+	GUI_y1 += 60	
+	GUI_y2 += 30
+	Gui, Add, Progress, x30 y%GUI_y1% w260 h14 cgreen vGUI_Neu, 100
+	}
 
 	If (Options_ServicesMonitor = 9) {
 	Services_Array := []
@@ -213,29 +213,23 @@ Gui, Add, Progress, x30 y%GUI_y1% w260 h14 cgreen vGUI_Neu, 100
 	;	The_WagersAverage += TPAS_Array["WagersperMin" para_Index][A_Index]
 	;TPAS_Array["WagersperMin" A_Index] := []
 
-
-
 ;View Array
 ;Array_Gui(Services_Array)
+		For index, obj in Services_Array {
+		Msgbox, % index . "  " . obj
+			For index2, obj2 in obj {
+			Msgbox, % index2 . "  " . obj2
+			}
+		}
 
-
-For index, obj in Services_Array {
-Msgbox, % index . "  " . obj
-	For index2, obj2 in obj {
-	Msgbox, % index2 . "  " . obj2
-	}
-}
-
-
-ExitApp
-;GUI_y1 += 50
-Gui, Add, Progress, x10 y%GUI_y1% w305 h200 hWndhWnd ; Progress controls make ideal canvases
-GUI_y2 += 200
+		ExitApp
+		;GUI_y1 += 50
+		Gui, Add, Progress, x10 y%GUI_y1% w305 h200 hWndhWnd ; Progress controls make ideal canvases
+		GUI_y2 += 200
 	}
 
 ;;Show GUI if all creation was successful
 GUI_Build()
-	
 	
 ;UnComment to see what is in the array
 ;Array_Gui(AllFiles_Array)
