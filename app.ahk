@@ -1,4 +1,4 @@
-﻿;/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\
+;/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\
 ; Description
 ;\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/--\--/
 ; Originally intended to show overnight when the SDL file had arrived. Also shows if said file stops growing.
@@ -11,7 +11,7 @@
 ;~~~~~~~~~~~~~~~~~~~~~
 StartUp()
 The_ProjectName := "Tote Health Monitor"
-The_VersionName = v0.13
+The_VersionName := 0.14.0
 
 ;Dependencies
 #Include %A_ScriptDir%\Functions
@@ -111,7 +111,7 @@ Gui, Font, s10, Arial
 
 Gui, Add, GroupBox, x6 y%GUI_y1% w310 h80 vGUI_TPASSession%A_Index%, % "TPAS   " . TPAS_Array[A_Index,"Name"]
 
-Gui, Add, Text, x10 y%GUI_y3% w60 h20 +Right, Results:
+; Gui, Add, Text, x10 y%GUI_y3% w60 h20 +Right, Results:
 Gui, Font, s10 w700, Arial
 Gui, Add, Text, x74 y%GUI_y3% vGUI_RaceResults%A_Index%, 000
 Gui, Font, s10 w100, Arial
@@ -464,15 +464,15 @@ TPAS_Array[A_Index,"SessionNumber"] := Fn_QuickRegEx(FileContents_TPASSession,"S
 guicontrol, Text, GUI_TPASSession%A_Index%, % TPAS_Array[A_Index,"Name"] . "      #" . TPAS_Array[A_Index,"SessionNumber"]
 
 
-;Download BOP RaceDayEventCollector page and collect number of results and date
-DownloadBOP := TPAS_Array[A_Index,"BOP"]
+;BOPs depreciated:
+; DownloadBOP := TPAS_Array[A_Index,"BOP"]
 
-FileDelete, % A_ScriptDir . "\Data\Temp\" . TPAS_Array[A_Index,"Name"] . "_BOPHTML.txt"
-UrlDownloadToFile, %DownloadBOP% , % A_ScriptDir . "\Data\Temp\" . TPAS_Array[A_Index,"Name"] . "_BOPHTML.txt"
-FileRead, FileContents_RaceResults, % A_ScriptDir . "\Data\Temp\" . TPAS_Array[A_Index,"Name"] . "_BOPHTML.txt"
+; FileDelete, % A_ScriptDir . "\Data\Temp\" . TPAS_Array[A_Index,"Name"] . "_BOPHTML.txt"
+; UrlDownloadToFile, %DownloadBOP% , % A_ScriptDir . "\Data\Temp\" . TPAS_Array[A_Index,"Name"] . "_BOPHTML.txt"
+; FileRead, FileContents_RaceResults, % A_ScriptDir . "\Data\Temp\" . TPAS_Array[A_Index,"Name"] . "_BOPHTML.txt"
 
-REG = NumberOfResultsEvents\">(\d*)<\/span> ;" ;Comment end
-TPAS_Array[A_Index,"ResultsNumber"] := Fn_QuickRegEx(FileContents_RaceResults,REG)
+; REG = NumberOfResultsEvents\">(\d*)<\/span> ;" ;Comment end
+; TPAS_Array[A_Index,"ResultsNumber"] := Fn_QuickRegEx(FileContents_RaceResults,REG)
 }
 
 ;GUI Updating is handled on a 2nd loop because downloading the file causes a lag or something
@@ -484,7 +484,7 @@ Loop % TPAS_Array.MaxIndex()
 	} Else {
 	Gui, Font, s10 w700 cBlack, Arial
 	}
-GuiControl, Text, GUI_RaceResults%A_Index%, % TPAS_Array[A_Index,"ResultsNumber"]
+GuiControl, Text, GUI_RaceResults%A_Index%, % ""
 GuiControl, Font, GUI_RaceResults%A_Index%
 Gui, Font, s10 w100 cBlack, Arial
 
@@ -953,7 +953,7 @@ Gui +AlwaysOnTop
 Gui, Font, s14 w70, Arial
 Gui, Add, Text, x2 y4 w330 h40 +Center, %The_ProjectName%
 Gui, Font, s10 w70, Arial
-Gui, Add, Text, x276 y0 w50 h20 +Right, %The_VersionName%
+Gui, Add, Text, x276 y0 w50 h20 +Right, v%The_VersionName%
 
 ;Gui, Add, CheckBox, x30 y30 Checked1 gSwitchOnOff, Always On Top
 
